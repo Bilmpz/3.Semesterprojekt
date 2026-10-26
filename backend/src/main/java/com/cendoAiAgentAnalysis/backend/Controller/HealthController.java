@@ -1,10 +1,11 @@
-package com.cendoAiAgentAnalysis.backend.Controller;
-
-import java.util.Map;
+// ID: T1 – findes allerede. Test: http://localhost:5173/api/health
+package com.cendoAiAgentAnalysis.backend.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
