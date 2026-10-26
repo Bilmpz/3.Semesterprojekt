@@ -13,10 +13,10 @@ async function get<T>(url: string): Promise<T> {
 const q = (f: Filters) => `companyId=${f.companyId}&days=${f.days}&search=${encodeURIComponent(f.search)}`
 
 export const getCompanies = (): Promise<Company[]> =>
-  USE_MOCK ? Promise.resolve(mock.companies) : get('/api/companies')
+  USE_MOCK ? Promise.resolve(mock.companies) : get('/api/kunder')
 
 export const getDashboard = (f: Filters): Promise<Dashboard> =>
-  USE_MOCK ? Promise.resolve(mock.dashboard) : get(`/api/dashboard?${q(f)}`)
+  USE_MOCK ? Promise.resolve(mock.dashboard) : get(`/api/overblik?${q(f)}`)
 
 export const getClusters = (f: Filters): Promise<Cluster[]> =>
   USE_MOCK
@@ -24,7 +24,7 @@ export const getClusters = (f: Filters): Promise<Cluster[]> =>
     : get(`/api/clusters?${q(f)}`)
 
 export const getConversations = (clusterId: string): Promise<Conversation[]> =>
-  USE_MOCK ? Promise.resolve(mock.conversations) : get(`/api/clusters/${clusterId}/conversations`)
+  USE_MOCK ? Promise.resolve(mock.conversations) : get(`/api/clusters/${clusterId}/samtaler`)
 
 export const startRun = (): Promise<unknown> =>
   USE_MOCK ? Promise.resolve({}) : fetch('/api/pipeline/run', { method: 'POST' }).then((r) => r.json())

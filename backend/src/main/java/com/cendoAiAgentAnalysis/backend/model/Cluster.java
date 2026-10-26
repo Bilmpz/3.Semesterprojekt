@@ -1,4 +1,4 @@
 // ID:          D1
-// Hvad:        @Node("Cluster"): id, title, description.
-// Bygger på:   –
-// Se docs/Backend_byggeplan_v0.4.docx
+// Delsystem:   Entitet
+// Hvad:        Cluster fra klassediagrammet: id, navn/label, beskrivelse, størrelse.
+// Se docs/Byggeplan_v0.5.docx
