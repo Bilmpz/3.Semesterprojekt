@@ -13,6 +13,7 @@ import java.util.Properties;
  * All settings for one pipeline run, read from config.properties.
  * The Hugging Face token is read from the HF_TOKEN environment variable (only needed when a provider is HUGGINGFACE).
  */
+
 public record PipelineConfig(
         Path datasetPath,
         String split,
@@ -39,16 +40,24 @@ public record PipelineConfig(
         List<String> compareModels,
         String hfToken) {
 
-    public enum PipelineMode { REASON_FIRST, FULL_TRANSCRIPT }
+    public enum PipelineMode {REASON_FIRST, FULL_TRANSCRIPT}
 
-    /** Where a model runs: locally via Ollama (free) or via the Hugging Face API (credits). */
-    public enum Provider { OLLAMA, HUGGINGFACE }
+    /**
+     * Where a model runs: locally via Ollama (free) or via the Hugging Face API (credits).
+     */
+    public enum Provider {OLLAMA, HUGGINGFACE}
 
     public static PipelineConfig load(Path file) throws IOException {
         Properties p = new Properties();
+
         try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
             p.load(reader);
         }
+
+        return fromProperties(p);
+    }
+
+    public static PipelineConfig fromProperties(Properties p) {
 
         Provider llmProvider = Provider.valueOf(get(p, "llm.provider").toUpperCase());
         Provider embeddingProvider = Provider.valueOf(get(p, "embedding.provider").toUpperCase());
@@ -87,7 +96,9 @@ public record PipelineConfig(
                 token == null ? null : token.strip());
     }
 
-    /** The same settings with another local LLM. Used when several models are compared in one run. */
+    /**
+     * The same settings with another local LLM. Used when several models are compared in one run.
+     */
     public PipelineConfig withOllamaLlmModel(String model) {
         return new PipelineConfig(datasetPath, split, mode, llmProvider, embeddingProvider, ollamaUrl,
                 model, ollamaEmbeddingModel, huggingFaceLlmUrl, huggingFaceLlmModel, huggingFaceEmbeddingUrl,
@@ -95,6 +106,7 @@ public record PipelineConfig(
                 umapNeighbors, minPoints, minClusterSize, outputDir, cacheDir, evaluationEnabled, compareModels,
                 hfToken);
     }
+
 
     /** True when compare.models lists models to run one after another. */
     public boolean comparing() {
