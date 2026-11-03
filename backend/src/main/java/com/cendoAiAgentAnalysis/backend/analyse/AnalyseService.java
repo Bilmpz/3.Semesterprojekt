@@ -87,7 +87,6 @@ public class AnalyseService {
             return new PipelineResult(samtaler, List.of(), List.of(), new int[0], Map.of());
         }
 
-        // TODO A4/A5: Kald Anonymizer og Validering her, når deres metoder er klar,
         // før transskriptionerne sendes til modeller eller skrives i cache.
 
         // Genbruger tidligere modelsvar fra disk, som i PipelineCli, så gentagne kørsler er hurtigere.
@@ -108,7 +107,6 @@ public class AnalyseService {
         for (int i = 0; i < samtaler.size(); i++) {
             Conversation samtale = samtaler.get(i);
             TransferReason aarsag = extractor.extractReason(samtale.transcript());
-            // TODO A5: Validér årsagsudtrækket og optæl/spring fejlede samtaler over.
             // Samtaler, årsager og forklaringer skal fortsat have samme indeks.
             aarsager.add(ReasonCleaner.clean(aarsag.primary()));
             forklaringer.add(aarsag.explanation());
@@ -133,7 +131,6 @@ public class AnalyseService {
         // Omdanner de korte årsager til talvektorer i samme rækkefølge som samtalerne.
         log.info("Laver embeddings med {}", config.activeEmbedding());
         double[][] vektorer = embedder.embed(aarsager).toArray(new double[0][]);
-        // TODO A5: Validér embedding-output før normalisering og dimensionsreduktion.
 
         // Skalerer vektorerne til længde 1, så den efterfølgende afstandsberegning
         // sammenligner deres retning frem for deres længde, ligesom i PipelineCli.
@@ -161,13 +158,11 @@ public class AnalyseService {
 
         log.info("Dimensionsreduktion færdig: {} punkter med {} dimensioner ({})",
                 punkter.length, punkter[0].length, reducer.description());
-        // TODO A5: Validér punkterne før clustering.
 
         // HDBSCAN grupperer lignende årsager. Hvert punkt får et cluster-id; -1 betyder støj.
         Clusterer clusterer = new HdbscanClusterer(config.minPoints(), config.minClusterSize());
         log.info("Clustering: {}", clusterer.description());
         int[] clusterIds = clusterer.cluster(punkter);
-        // TODO A5: Kontrollér, at der er ét cluster-id pr. samtale.
 
         // Samler data midlertidigt, så vi kan finde eksempler fra hver gruppe til navngivning.
         Map<Integer, ClusterName> navne = new TreeMap<>();
@@ -194,9 +189,6 @@ public class AnalyseService {
         PipelineResult resultat = new PipelineResult(
                 samtaler, aarsager, forklaringer, clusterIds, navne);
 
-        // TODO A4/A5: Anonymisér og validér resultatet før gemning.
-        // TODO A3: Send resultatet til Neo4jResultWriter, når dens gemmemetode er klar.
-        // TODO A2: Erstat ProviderFactory og manuel oprettelse med plug-ins fra PluginConfig.
         long antalGrupper = resultat.membersByCluster().keySet().stream()
                 .filter(id -> id != Clusterer.NOISE)
                 .count();
