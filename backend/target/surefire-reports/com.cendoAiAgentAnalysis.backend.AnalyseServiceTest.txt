@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.cendoAiAgentAnalysis.backend.AnalyseServiceTest
--------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.027 s -- in com.cendoAiAgentAnalysis.backend.AnalyseServiceTest
