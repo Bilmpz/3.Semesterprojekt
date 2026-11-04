@@ -12,10 +12,7 @@ async function get<T>(url: string): Promise<T> {
 
 const q = (f: Filters) => `companyId=${f.companyId}&days=${f.days}&search=${encodeURIComponent(f.search)}`
 
-export const getCompanies = (): Promise<Company[]> => get('/api/kunder')
-
-// export const getCompanies = (): Promise<Company[]> =>
-//   USE_MOCK ? Promise.resolve(mock.companies) : get('/api/kunder')
+export const getCompanies = (): Promise<Company[]> => get('/api/virksomheder')
 
 export const getDashboard = (f: Filters): Promise<Dashboard> =>
   USE_MOCK ? Promise.resolve(mock.dashboard) : get(`/api/overblik?${q(f)}`)
