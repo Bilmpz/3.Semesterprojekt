@@ -2,8 +2,10 @@ package com.cendoAiAgentAnalysis.backend.analyse.config;
 
 import com.cendoAiAgentAnalysis.backend.dataadgang.AiAgentRepository;
 import com.cendoAiAgentAnalysis.backend.dataadgang.KundeRepository;
+import com.cendoAiAgentAnalysis.backend.dataadgang.VirksomhedRepository;
 import com.cendoAiAgentAnalysis.backend.model.AiAgent;
 import com.cendoAiAgentAnalysis.backend.model.Kunde;
+import com.cendoAiAgentAnalysis.backend.model.Virksomhed;
 
 import org.springframework.boot.CommandLineRunner; //Allows the class to run code at application startup, so "Run" is called
 import org.springframework.stereotype.Component; //Does so springboot can find this class and run it at startup
@@ -13,13 +15,16 @@ public class TestData implements CommandLineRunner {
 
     private final KundeRepository kundeRepository;
     private final AiAgentRepository aiAgentRepository;
+    private final VirksomhedRepository virksomhedRepository;
 
     // Constructor  - injection of the repositories, so we can use them to save and retrieve data from the database
     public TestData(
             KundeRepository kundeRepository,
-            AiAgentRepository aiAgentRepository) {
+            AiAgentRepository aiAgentRepository,
+            VirksomhedRepository virksomhedRepository) {
         this.kundeRepository = kundeRepository;
         this.aiAgentRepository = aiAgentRepository;
+        this.virksomhedRepository = virksomhedRepository;
     }
 
     @Override
@@ -32,6 +37,12 @@ public class TestData implements CommandLineRunner {
         // Calls the save method of the kundeRepository to persist the Kunde objects in the database
         kundeRepository.save(kunde1);
         kundeRepository.save(kunde2);
+
+        // Create and save test companies
+        Virksomhed virksomhed1 = new Virksomhed("virksomhed-1", "Værksted Nord");
+        Virksomhed virksomhed2 = new Virksomhed("virksomhed-2", "Bilhuset Syd");
+        virksomhedRepository.save(virksomhed1);
+        virksomhedRepository.save(virksomhed2);
 
         // Create and save test AI agents
         AiAgent aiAgent1 = new AiAgent("1", "AI Agent 1");
@@ -59,8 +70,17 @@ public class TestData implements CommandLineRunner {
                 )
         );
 
-        // Prints the count of customers and AI agents in the database to the console
+        System.out.println("\nVirksomheder");
+        virksomhedRepository.findAll().forEach(virksomhed ->
+                System.out.println(
+                        "ID: " + virksomhed.getId()
+                        + ", Navn: " + virksomhed.getNavn()
+                )
+        );
+
+        // Prints the count of customers, AI agents and companies in the database to the console
         System.out.println("\nAntal kunder: " + kundeRepository.count());
         System.out.println("Antal AI-agenter: " + aiAgentRepository.count());
+        System.out.println("Antal virksomheder: " + virksomhedRepository.count());
     }
 }
