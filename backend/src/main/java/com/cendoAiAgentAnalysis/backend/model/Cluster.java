@@ -3,7 +3,7 @@
 // Hvad:        Cluster fra klassediagrammet: id, navn/label, beskrivelse, størrelse.
 // Se docs/Byggeplan_v0.6.docx
 package com.cendoAiAgentAnalysis.backend.model; // Klassen ligger i mappen model
-
+import java.util.List;
 import org.springframework.data.neo4j.core.schema.GeneratedValue; // Lader databasen lave id'et selv
 import org.springframework.data.neo4j.core.schema.Id; // Markerer det unikke id
 import org.springframework.data.neo4j.core.schema.Node; // Gør klassen til en node i Neo4j
@@ -50,4 +50,11 @@ public class Cluster {
     public void setBeskrivelse(String beskrivelse) { this.beskrivelse = beskrivelse; }
 
     public void setStoerrelse(int stoerrelse) { this.stoerrelse = stoerrelse; }
+    
+    public List<Double> getCentroide() { return centroide; }
+    
+    public boolean isErNy() { return erNy; }
+
+    public void setCentroide(List<Double> centroide) { this.centroide = centroide; }
+    public void setErNy(boolean erNy) { this.erNy = erNy; }
 }

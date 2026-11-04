@@ -164,6 +164,30 @@ public class AnalyseService {
         log.info("Clustering: {}", clusterer.description());
         int[] clusterIds = clusterer.cluster(punkter);
 
+
+               // ---------------- A6: Find nye årsager ----------------
+
+        // Laver et objekt, der kan finde nye årsager (grænse 0,8 som standard)
+        NyeAarsager nyeAarsager = new NyeAarsager();
+
+        // Beregner én centroide (gennemsnitsvektor) pr. cluster i denne kørsel.
+        // Bruger vektorer (768 tal) og ikke punkter fra UMAP, så de kan sammenlignes på tværs af kørsler.
+        // Resultat: cluster-id -> centroide
+        Map<Integer, double[]> centroider = nyeAarsager.centroider(vektorer, clusterIds);
+
+        // Henter de clusters, der allerede ligger i Neo4j fra sidste kørsel,
+        // og tager deres gemte centroider ud
+        List<double[]> gamleCentroider = clusterRepository.findAll().stream()
+                .filter(c -> c.getCentroide() != null)             // spring clusters uden centroide over
+                .map(c -> VectorUtils.tilArray(c.getCentroide()))  // List<Double> fra Neo4j -> double[]
+                .toList();
+
+        // Sammenligner nye og gamle centroider. Ligner et nyt cluster intet gammelt,
+        // kommer dets id med i nyeIds. Første kørsel: ingen gamle -> tomt sæt.
+        Set<Integer> nyeIds = nyeAarsager.findNye(centroider, gamleCentroider);
+
+        // Skriver i loggen, hvilke clusters der er nye, så man kan følge med
+        log.info("Nye årsager siden sidst: {}", nyeIds);
         // Samler data midlertidigt, så vi kan finde eksempler fra hver gruppe til navngivning.
         Map<Integer, ClusterName> navne = new TreeMap<>();
         PipelineResult udenNavne = new PipelineResult(
