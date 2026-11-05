@@ -13,7 +13,8 @@ import java.util.List; // Metoderne returnerer lister af samtaler
 // Repository til Samtale-noder.
 //   Samtale = typen af objekter, vi gemmer
 //   String  = typen på id-feltet i Samtale
-public interface SamtaleRepository extends Neo4jRepository<Samtale, String> {
+//   SamtaleStatistik = interface med metoder til statistik (hentOverblikstal)
+public interface SamtaleRepository extends Neo4jRepository<Samtale, String>, SamtaleStatistik {
 
     // Alle samtaler i ét cluster, nyeste først (bruges, når medarbejderen åbner et cluster – UC2).
     //
