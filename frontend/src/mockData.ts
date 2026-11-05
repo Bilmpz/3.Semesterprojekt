@@ -19,13 +19,10 @@ export const clusters: Cluster[] = [
 const timeline = Array.from({ length: 10 }, (_, i) => ({
   date: `2026-10-${String(i + 1).padStart(2, '0')}`,
   conversations: 40 + i * 4 + (i % 3) * 6,
-  transfers: 10 + i + (i % 2) * 3,
 }))
 
 export const dashboard: Dashboard = {
   totalConversations: 500,
-  transfers: 113,
-  transferRate: 23,
   causesFound: clusters.length,
   lowData: false,
   topCauses: clusters.slice(0, 5).map((c) => ({ id: c.id, title: c.title, count: c.count })),

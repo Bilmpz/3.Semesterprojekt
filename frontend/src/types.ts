@@ -4,13 +4,11 @@ export type Company = { id: string; name: string }
 
 export type Cause = { id: string; title: string; count: number }
 
-export type DayPoint = { date: string; conversations: number; transfers: number }
+export type DayPoint = { date: string; conversations: number }
 
 /** DashboardDto – GET /api/dashboard */
 export type Dashboard = {
   totalConversations: number
-  transfers: number
-  transferRate: number
   causesFound: number
   lowData: boolean
   topCauses: Cause[]
