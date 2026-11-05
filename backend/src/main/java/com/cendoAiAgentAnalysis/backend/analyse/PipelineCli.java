@@ -1,33 +1,26 @@
 package com.cendoAiAgentAnalysis.backend.analyse;
 
-import com.cendoAiAgentAnalysis.backend.analyse.cache.JsonCache;
 import com.cendoAiAgentAnalysis.backend.analyse.clustering.Clusterer;
-import com.cendoAiAgentAnalysis.backend.analyse.clustering.HdbscanClusterer;
 import com.cendoAiAgentAnalysis.backend.analyse.config.PipelineConfig;
 import com.cendoAiAgentAnalysis.backend.analyse.config.PipelineConfig.PipelineMode;
-import com.cendoAiAgentAnalysis.backend.analyse.config.ProviderFactory;
 import com.cendoAiAgentAnalysis.backend.analyse.data.DatasetLoader;
-import com.cendoAiAgentAnalysis.backend.analyse.embedding.CachingEmbedder;
 import com.cendoAiAgentAnalysis.backend.analyse.embedding.Embedder;
 import com.cendoAiAgentAnalysis.backend.analyse.evaluation.ClusterEvaluator;
 import com.cendoAiAgentAnalysis.backend.analyse.evaluation.EmbeddingEvaluator;
 import com.cendoAiAgentAnalysis.backend.analyse.evaluation.EvaluationReport;
 import com.cendoAiAgentAnalysis.backend.analyse.extraction.CachingReasonExtractor;
-import com.cendoAiAgentAnalysis.backend.analyse.extraction.LlmReasonExtractor;
 import com.cendoAiAgentAnalysis.backend.analyse.extraction.ReasonCleaner;
-import com.cendoAiAgentAnalysis.backend.analyse.llm.ChatClient;
 import com.cendoAiAgentAnalysis.backend.analyse.model.ClusterName;
 import com.cendoAiAgentAnalysis.backend.analyse.model.Conversation;
 import com.cendoAiAgentAnalysis.backend.analyse.model.PipelineResult;
 import com.cendoAiAgentAnalysis.backend.analyse.model.TransferReason;
 import com.cendoAiAgentAnalysis.backend.analyse.naming.ClusterNamer;
-import com.cendoAiAgentAnalysis.backend.analyse.naming.LlmClusterNamer;
 import com.cendoAiAgentAnalysis.backend.analyse.output.ResultWriter;
 import com.cendoAiAgentAnalysis.backend.analyse.reduction.DimensionReducer;
-import com.cendoAiAgentAnalysis.backend.analyse.reduction.NoReduction;
-import com.cendoAiAgentAnalysis.backend.analyse.reduction.UmapReducer;
 import com.cendoAiAgentAnalysis.backend.analyse.util.VectorUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cendoAiAgentAnalysis.backend.analyse.extraction.ReasonExtractor;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -54,6 +47,34 @@ import java.util.TreeMap;
  * settings unchanged, and a comparison table is written to results/sammenligning_<split>.csv.
  */
 public class PipelineCli {
+    private final PipelineConfig cfg;
+    private final ObjectMapper mapper;
+    private final ReasonExtractor extractor;
+    private final Embedder embedder;
+    private final DimensionReducer reducer;
+    private final Clusterer clusterer;
+    private final ClusterNamer namer;
+
+    public PipelineCli(PipelineConfig cfg, ObjectMapper mapper, ReasonExtractor extractor,
+                       Embedder embedder, DimensionReducer reducer, Clusterer clusterer, ClusterNamer namer) {
+        this.cfg = cfg;
+        this.mapper = mapper;
+        this.extractor = extractor;
+        this.embedder = embedder;
+        this.reducer = reducer;
+        this.clusterer = clusterer;
+        this.namer = namer;
+    }
+
+    private static RunSummary runWithSpring(PipelineConfig cfg, Path outDir) throws Exception {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.registerBean("pipelineConfig", PipelineConfig.class, () -> cfg);
+            context.register(PluginConfig.class);
+            context.refresh();
+            return context.getBean(PipelineCli.class).run(outDir);
+        }
+    }
+
 
     /** The key numbers from one run, used in the model comparison table. */
     record RunSummary(String model, int conversations, int clusters, double noiseShare,
@@ -69,10 +90,9 @@ public class PipelineCli {
 
     public static void main(String[] args) throws Exception {
         PipelineConfig cfg = PipelineConfig.load(Path.of(args.length > 0 ? args[0] : "config.properties"));
-        ObjectMapper mapper = new ObjectMapper();
 
         if (!cfg.comparing()) {
-            run(cfg, mapper, cfg.outputDir().resolve(cfg.mode().name().toLowerCase() + "_" + cfg.split()));
+            runWithSpring(cfg, cfg.outputDir().resolve(cfg.mode().name().toLowerCase() + "_" + cfg.split()));
             return;
         }
 
@@ -87,7 +107,7 @@ public class PipelineCli {
             Path outDir = cfg.outputDir().resolve(
                     cfg.mode().name().toLowerCase() + "_" + cfg.split() + "_" + slug(model));
             try {
-                summaries.add(run(modelCfg, mapper, outDir));
+                summaries.add(runWithSpring(modelCfg, outDir));
             } catch (Exception e) { // e.g. model not pulled: keep going with the next model
                 System.out.println("   Kørslen med " + model + " fejlede: " + e);
                 summaries.add(RunSummary.failed(model, e));
@@ -100,8 +120,7 @@ public class PipelineCli {
         System.out.println("Sammenligning gemt i: " + table.toAbsolutePath());
     }
 
-    private static RunSummary run(PipelineConfig cfg, ObjectMapper mapper, Path outDir) throws Exception {
-        ChatClient chat = ProviderFactory.chatClient(cfg, mapper);
+    public RunSummary run(Path outDir) throws Exception {
 
         // 1. Load the transferred conversations
         System.out.println("1. Indlæser data fra " + cfg.datasetPath());
@@ -114,23 +133,17 @@ public class PipelineCli {
 
         // 2. Decide which text represents each conversation
         long llmStart = System.nanoTime();
-        Texts step2 = textsToEmbed(cfg, conversations, chat, mapper);
+        Texts step2 = textsToEmbed(conversations);
         List<String> texts = step2.embedded();
         double llmSeconds = (System.nanoTime() - llmStart) / 1e9;
 
         // 3. Embeddings
         System.out.println("3. Laver embeddings med " + cfg.activeEmbedding());
-        Embedder embedder = new CachingEmbedder(
-                ProviderFactory.embedder(cfg, mapper),
-                new JsonCache(cfg.cacheDir().resolve("embeddings.json"), mapper),
-                ProviderFactory.embeddingCacheName(cfg), mapper);
         double[][] vectors = VectorUtils.l2Normalize(embedder.embed(texts).toArray(new double[0][]));
         System.out.printf("   %d vektorer med %d dimensioner%n", vectors.length, vectors[0].length);
 
         // 4. Dimension reduction
-        DimensionReducer reducer = cfg.umapEnabled()
-                ? new UmapReducer(cfg.umapDimensions(), cfg.umapNeighbors())
-                : new NoReduction();
+        String reductionDescription = reducer.description();
         System.out.println("4. Dimensionsreduktion: " + reducer.description());
         double[][] points;
         try {
@@ -138,12 +151,11 @@ public class PipelineCli {
         } catch (Throwable e) { // UnsatisfiedLinkError if the native BLAS/ARPACK libraries are missing
             System.out.println("   UMAP kunne ikke køre (" + e + ").");
             System.out.println("   Fortsætter uden dimensionsreduktion. Se README for opsætning af UMAP.");
-            reducer = new NoReduction();
+            reductionDescription = "No reduction";
             points = vectors;
         }
 
         // 5. Clustering
-        Clusterer clusterer = new HdbscanClusterer(cfg.minPoints(), cfg.minClusterSize());
         System.out.println("5. Clustering: " + clusterer.description());
         int[] clusterIds = clusterer.cluster(points);
 
@@ -152,7 +164,6 @@ public class PipelineCli {
         PipelineResult unnamed = new PipelineResult(conversations, texts, step2.explanations(), clusterIds, names);
         if (cfg.namingEnabled()) {
             System.out.println("6. Navngiver klynger med " + cfg.activeLlm());
-            ClusterNamer namer = new LlmClusterNamer(chat, mapper);
             for (var entry : unnamed.membersByCluster().entrySet()) {
                 if (entry.getKey() == Clusterer.NOISE) {
                     continue;
@@ -183,7 +194,7 @@ public class PipelineCli {
                 "Split:      " + cfg.split() + " (" + conversations.size() + " samtaler)",
                 "LLM:        " + cfg.activeLlm(),
                 "Embedding:  " + cfg.activeEmbedding(),
-                "Reduktion:  " + reducer.description(),
+                "Reduktion:  " + reductionDescription,
                 "Clustering: " + clusterer.description());
         ResultWriter.write(outDir, result, settings, report, mapper);
 
@@ -268,8 +279,7 @@ public class PipelineCli {
      * Pipeline 1 embeds the LLM's short primary reason and keeps its explanatory sentence for reading.
      * Pipeline 2 embeds the whole transcript.
      */
-    private static Texts textsToEmbed(PipelineConfig cfg, List<Conversation> conversations,
-                                      ChatClient chat, ObjectMapper mapper) throws Exception {
+    private Texts textsToEmbed(List<Conversation> conversations) throws Exception {
         if (cfg.mode() == PipelineMode.FULL_TRANSCRIPT) {
             System.out.println("2. Bruger hele transskriptionen (pipeline 2) - intet LLM-trin");
             List<String> transcripts = conversations.stream().map(Conversation::transcript).toList();
@@ -277,15 +287,12 @@ public class PipelineCli {
         }
 
         System.out.println("2. Udtrækker viderestillingsårsager med " + cfg.activeLlm() + " (pipeline 1)");
-        LlmReasonExtractor llm = new LlmReasonExtractor(chat, mapper);
-        CachingReasonExtractor extractor = new CachingReasonExtractor(
-                llm, new JsonCache(cfg.cacheDir().resolve("reasons.json"), mapper), llm.cacheKeyPart(), mapper);
-
         List<String> primaries = new ArrayList<>();
         List<String> explanations = new ArrayList<>();
         for (int i = 0; i < conversations.size(); i++) {
             Conversation c = conversations.get(i);
-            boolean cached = extractor.isCached(c.transcript());
+            boolean cached = extractor instanceof CachingReasonExtractor caching
+                    && caching.isCached(c.transcript());
             TransferReason reason = extractor.extractReason(c.transcript());
             primaries.add(ReasonCleaner.clean(reason.primary())); // also cleans answers from the cache
             explanations.add(reason.explanation());

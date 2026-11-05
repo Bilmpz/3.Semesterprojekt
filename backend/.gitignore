@@ -1,6 +1,9 @@
 HELP.md
 .env
 
+### Maven ###
+/target/
+
 ### STS ###
 .apt_generated
 .classpath
