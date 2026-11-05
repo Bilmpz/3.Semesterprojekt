@@ -14,8 +14,7 @@ const q = (f: Filters) => `companyId=${f.companyId}&days=${f.days}&search=${enco
 
 export const getCompanies = (): Promise<Company[]> => get('/api/virksomheder')
 
-export const getDashboard = (f: Filters): Promise<Dashboard> =>
-  USE_MOCK ? Promise.resolve(mock.dashboard) : get(`/api/overblik?${q(f)}`)
+export const getDashboard = (f: Filters): Promise<Dashboard> => get(`/api/overblik?${q(f)}`)
 
 export const getClusters = (f: Filters): Promise<Cluster[]> =>
   USE_MOCK

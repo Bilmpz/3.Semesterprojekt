@@ -15,12 +15,20 @@ export default function App() {
   const [filters, setFilters] = useState<Filters>({ companyId: '', days: 30, search: '' })
   const [companies, setCompanies] = useState<Company[]>([])
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
+  const [dashboardError, setDashboardError] = useState<string | null>(null)
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [openId, setOpenId] = useState<string | null>(null)
 
   useEffect(() => { getCompanies().then(setCompanies) }, [])
   useEffect(() => {
-    getDashboard(filters).then(setDashboard)
+    getDashboard(filters)
+      .then((data) => {
+        setDashboard(data)
+        setDashboardError(null)
+      })
+      .catch((error: unknown) => {
+        setDashboardError(error instanceof Error ? error.message : 'Kunne ikke hente overbliksdata')
+      })
     getClusters(filters).then(setClusters)
   }, [filters])
 
@@ -31,6 +39,10 @@ export default function App() {
     <div className="page">
       <Header page={page} onPage={(p) => { setPage(p); setOpenId(null) }} onRun={() => startRun()} />
       <FilterBar companies={companies} value={filters} onApply={setFilters} />
+
+      {page === 'overblik' && dashboardError && (
+        <div className="card dashed warning">Kunne ikke hente overbliksdata fra backend: {dashboardError}</div>
+      )}
 
       {page === 'overblik' && dashboard && (
         <>
