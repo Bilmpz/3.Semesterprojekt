@@ -14,7 +14,9 @@ export function TopCauses({ causes, onOpen }: Props) {
           <span className="bar-value">{c.count}</span>
         </button>
       ))}
-      <p className="hint">Klik på en årsag for at se samtalerne</p>
+      {causes.length > 0
+        ? <p className="hint">Klik på en årsag for at se samtalerne</p>
+        : <p className="hint">Ingen viderestillingsårsager i det valgte filter.</p>}
     </section>
   )
 }
