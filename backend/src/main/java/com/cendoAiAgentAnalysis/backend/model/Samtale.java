@@ -96,4 +96,15 @@ public class Samtale {
     public void setCluster(Cluster cluster) { this.cluster = cluster; } // laver TILHOERER-pilen ved save()
     public void setKunde(Kunde kunde) { this.kunde = kunde; } // laver HAR-pilen ved save()
     public void setAiAgent(AiAgent aiAgent) { this.aiAgent = aiAgent; } // laver HAANDTERER-pilen ved save()
+
+    // Opdaterer den korte viderestillingsårsag
+    public void setViderestillingsaarsag(String viderestillingsaarsag) {
+        this.viderestillingsaarsag = viderestillingsaarsag;
+    }
+
+    // Opdaterer den længere forklaring
+    public void setForklaring(String forklaring) {
+        this.forklaring = forklaring;
+    }
+
 }

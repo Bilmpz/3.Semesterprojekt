@@ -1,44 +1,78 @@
 
 package com.cendoAiAgentAnalysis.backend.analyse.output;
 
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.cendoAiAgentAnalysis.backend.analyse.model.ClusterName;
+import com.cendoAiAgentAnalysis.backend.analyse.model.Conversation;
 import com.cendoAiAgentAnalysis.backend.analyse.model.PipelineResult;
+import com.cendoAiAgentAnalysis.backend.dataadgang.ClusterRepository;
+import com.cendoAiAgentAnalysis.backend.dataadgang.SamtaleRepository;
+import com.cendoAiAgentAnalysis.backend.model.Cluster;
+import com.cendoAiAgentAnalysis.backend.model.Samtale;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.List;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import com.cendoAiAgentAnalysis.backend.analyse.model.Conversation;
-
-import com.cendoAiAgentAnalysis.backend.analyse.model.ClusterName;
 import java.util.Map;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 public class Neo4jResultWriterTest {
 
+    private ClusterRepository clusterRepository;
+    private SamtaleRepository samtaleRepository;
+    private Neo4jResultWriter writer;
+
+    @BeforeEach
+    void setUp() {
+        // Opretter falske repositories, så vi ikke bruger den rigtige database
+        clusterRepository = mock(ClusterRepository.class);
+        samtaleRepository = mock(SamtaleRepository.class);
+
+        // Returnerer det cluster, som writeren forsøger at gemme
+        when(clusterRepository.save(any(Cluster.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Opretter writeren med de to repositories
+        writer = new Neo4jResultWriter(
+                clusterRepository,
+                samtaleRepository
+        );
+    }
+
     @Test
     void shouldRejectNullResult() {
-
-        // Opretter den writer, vi vil teste
-        Neo4jResultWriter writer = new Neo4jResultWriter();
-
         // Kontrollerer at null giver en NullPointerException
-        assertThrows(NullPointerException.class, () -> writer.write(null));
+        assertThrows(
+                NullPointerException.class,
+                () -> writer.write(null)
+        );
+
+        verifyNoInteractions(clusterRepository, samtaleRepository);
     }
+
     @Test
     void shouldRejectMismatchedResultCounts() {
-
         // Opretter et analyseresultat med forkert antal cluster-ID'er
         PipelineResult result = new PipelineResult(
                 List.of(),
                 List.of(),
                 List.of(),
                 new int[]{3},
-                java.util.Map.of()
+                Map.of()
         );
-        Neo4jResultWriter writer = new Neo4jResultWriter();
 
-        assertThrows(IllegalArgumentException.class, () -> writer.write(result));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> writer.write(result)
+        );
+
+        verifyNoInteractions(clusterRepository, samtaleRepository);
     }
+
     @Test
     void shouldRejectMissingClusterName() {
         // Opretter en testsamtale
@@ -54,10 +88,8 @@ public class Neo4jResultWriterTest {
                 List.of("Loginproblem"),
                 List.of("Kunden kan ikke logge ind på sin konto"),
                 new int[]{5},
-                java.util.Map.of()
+                Map.of()
         );
-
-        Neo4jResultWriter writer = new Neo4jResultWriter();
 
         // Kontrollerer at det manglende clusternavn giver den rigtige fejl
         IllegalArgumentException exception = assertThrows(
@@ -69,10 +101,12 @@ public class Neo4jResultWriterTest {
                 "Mangler oplysninger om cluster 5",
                 exception.getMessage()
         );
+
+        verifyNoInteractions(clusterRepository, samtaleRepository);
     }
+
     @Test
     void shouldAcceptValidPipelineResult() {
-
         // Opretter en testsamtale
         Conversation conversation = new Conversation(
                 "SYN-0001",
@@ -86,7 +120,6 @@ public class Neo4jResultWriterTest {
                 "Kunder der har problemer med at logge ind"
         );
 
-        // Opretter et gyldigt analyseresultat
         PipelineResult result = new PipelineResult(
                 List.of(conversation),
                 List.of("Loginproblem"),
@@ -95,11 +128,24 @@ public class Neo4jResultWriterTest {
                 Map.of(5, clusterName)
         );
 
-        Neo4jResultWriter writer = new Neo4jResultWriter();
-
         // Kontrollerer at resultatet kan behandles uden fejl
         assertDoesNotThrow(() -> writer.write(result));
+
+        // Kontrollerer at ét cluster og én samtale gemmes
+        verify(clusterRepository, times(1)).save(any(Cluster.class));
+        verify(samtaleRepository, times(1)).save(any(Samtale.class));
+
+        // Kontrollerer at samtalen er forbundet til et cluster
+        ArgumentCaptor<Samtale> captor =
+                ArgumentCaptor.forClass(Samtale.class);
+
+        verify(samtaleRepository).save(captor.capture());
+
+        Samtale savedConversation = captor.getValue();
+
+        assertNotNull(savedConversation.getCluster());
     }
+
     @Test
     void shouldAcceptNoiseConversation() {
         // Opretter en samtale, der er klassificeret som støj
@@ -109,7 +155,6 @@ public class Neo4jResultWriterTest {
                 "Kunden har et usædvanligt spørgsmål"
         );
 
-        // Cluster-ID -1 betyder støj
         PipelineResult result = new PipelineResult(
                 List.of(conversation),
                 List.of("Ukendt årsag"),
@@ -118,9 +163,20 @@ public class Neo4jResultWriterTest {
                 Map.of()
         );
 
-        Neo4jResultWriter writer = new Neo4jResultWriter();
-
         // Støj må ikke kræve et clusternavn
         assertDoesNotThrow(() -> writer.write(result));
+
+        // Støj skal gemmes som samtale, men uden cluster
+        verify(clusterRepository, never()).save(any(Cluster.class));
+        verify(samtaleRepository, times(1)).save(any(Samtale.class));
+
+        ArgumentCaptor<Samtale> captor =
+                ArgumentCaptor.forClass(Samtale.class);
+
+        verify(samtaleRepository).save(captor.capture());
+
+        Samtale savedConversation = captor.getValue();
+
+        assertNull(savedConversation.getCluster());
     }
 }
