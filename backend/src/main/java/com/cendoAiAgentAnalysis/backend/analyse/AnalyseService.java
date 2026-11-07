@@ -6,10 +6,7 @@ import com.cendoAiAgentAnalysis.backend.analyse.data.DatasetLoader;
 import com.cendoAiAgentAnalysis.backend.analyse.embedding.Embedder;
 import com.cendoAiAgentAnalysis.backend.analyse.extraction.ReasonCleaner;
 import com.cendoAiAgentAnalysis.backend.analyse.extraction.ReasonExtractor;
-import com.cendoAiAgentAnalysis.backend.analyse.model.Conversation;
-import com.cendoAiAgentAnalysis.backend.analyse.model.ClusterName;
-import com.cendoAiAgentAnalysis.backend.analyse.model.PipelineResult;
-import com.cendoAiAgentAnalysis.backend.analyse.model.TransferReason;
+import com.cendoAiAgentAnalysis.backend.analyse.model.*;
 import com.cendoAiAgentAnalysis.backend.analyse.naming.ClusterNamer;
 import com.cendoAiAgentAnalysis.backend.analyse.reduction.DimensionReducer;
 import com.cendoAiAgentAnalysis.backend.analyse.util.VectorUtils;
@@ -20,16 +17,14 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-// Gør klassen til en Spring-service, som Spring kan oprette og bruge i fx testen.
 @Service
-// Aktiverer Springs planlægning, så den natlige metode bliver kaldt automatisk.
 @EnableScheduling
 public class AnalyseService {
+    private static final Logger log = LoggerFactory.getLogger(AnalyseService.class);
+    private final AtomicBoolean running = new AtomicBoolean();
     private final PipelineConfig config;
     private final ReasonExtractor extractor;
     private final Embedder embedder;
@@ -47,121 +42,114 @@ public class AnalyseService {
         this.namer = namer;
     }
 
-
-    // Skriver status og resultater i loggen, så kørslen kan følges.
-    private static final Logger log =
-            LoggerFactory.getLogger(AnalyseService.class);
-
-    // Kører kl. 02 dansk tid, mens Spring Boot kører. Cron kan ændres via analyse.cron.
     @Scheduled(cron = "${analyse.cron:0 0 2 * * *}", zone = "Europe/Copenhagen")
     public void koerNatligAnalyse() {
         try {
+            // Drift må aldrig forbruge den urørte test-del.
+            if (!"train".equals(config.split())) {
+                log.warn("Natjob sprunget over: dataset.split skal være train");
+                return;
+            }
             koerAnalyse();
         } catch (InterruptedException e) {
-            // Bevarer afbrydelsessignalet, så applikationen kan lukke korrekt ned.
             Thread.currentThread().interrupt();
-            log.warn("Den natlige analyse blev afbrudt", e);
+            log.warn("Natlig analyse afbrudt");
         } catch (IOException | RuntimeException e) {
-            log.error("Den natlige analyse fejlede", e);
+            // Undtagelsestekst kan indeholde modelsvar og samtaletekst.
+            log.error("Natlig analyse fejlede ({})", e.getClass().getSimpleName());
         }
     }
 
-    // Samler trinnene og returnerer resultatet, så det kan testes og sendes til A3.
     public PipelineResult koerAnalyse() throws IOException, InterruptedException {
-        List<Conversation> samtaler =
-                DatasetLoader.loadTransfers(
-                        config.datasetPath(),
-                        config.split()
-                );
+        return koerAnalyseMedDetaljer().result();
+    }
 
-        log.info("Indlæst {} viderestillede samtaler", samtaler.size());
+    /** Embeddings og tællere fra præcis samme kørsel til E3; facit indgår aldrig her. */
+    public record AnalysisRun(PipelineResult result, double[][] embeddings, int inputCount,
+                              int conversationErrors, int namingErrors, boolean reductionFallback) {}
 
-        // Stopper tidligt, hvis der ikke er nogen samtaler at analysere.
-        if (samtaler.isEmpty()) {
-            log.info("Ingen samtaler at analysere");
-            return new PipelineResult(samtaler, List.of(), List.of(), new int[0], Map.of());
+    public AnalysisRun koerAnalyseMedDetaljer() throws IOException, InterruptedException {
+        if (!running.compareAndSet(false, true)) {
+            throw new IllegalStateException("En analyse kører allerede");
         }
-
-
-        List<String> aarsager = new ArrayList<>();
-        List<String> forklaringer = new ArrayList<>();
-
-        // Udtrækker årsag og forklaring for hver samtale i datasættets rækkefølge.
-        for (int i = 0; i < samtaler.size(); i++) {
-            Conversation samtale = samtaler.get(i);
-            TransferReason aarsag = extractor.extractReason(samtale.transcript());
-            // Samtaler, årsager og forklaringer skal fortsat have samme indeks.
-            aarsager.add(ReasonCleaner.clean(aarsag.primary()));
-            forklaringer.add(aarsag.explanation());
-
-            // Viser fremdriften, så længere modelkørsler kan følges i loggen.
-            log.info("[{}/{}] Samtale {} – årsag: {}",
-                    i + 1, samtaler.size(), samtale.id(), aarsager.getLast());
-            log.info("Forklaring: {}", aarsag.explanation());
-        }
-
-        log.info("Årsagsudtræk færdigt for {} samtaler", aarsager.size());
-
-        log.info("Laver embeddings med {}", config.activeEmbedding());
-        double[][] vektorer = embedder.embed(aarsager).toArray(new double[0][]);
-
-        // Skalerer vektorerne til længde 1, så den efterfølgende afstandsberegning
-        // sammenligner deres retning frem for deres længde, ligesom i PipelineCli.
-        vektorer = VectorUtils.l2Normalize(vektorer);
-
-        log.info("Embedding færdigt: {} vektorer med {} dimensioner",
-                vektorer.length, vektorer[0].length);
-
-        String reductionDescription = reducer.description();
-        log.info("Dimensionsreduktion: {}", reducer.description());
-        double[][] punkter;
+        int inputCount = 0, errors = 0, namingErrors = 0;
+        boolean success = false;
+        log.info("Analyse start: split={}", config.split());
         try {
-            punkter = reducer.reduce(vektorer);
-        } catch (RuntimeException | LinkageError e) {
-            // Fortsætter med de oprindelige vektorer, hvis UMAP fejler, fx ved manglende native biblioteker.
-            log.warn("Dimensionsreduktion fejlede; fortsætter uden reduktion", e);
-            reductionDescription = "No reduction";
-            punkter = vektorer;
-        }
-
-        log.info("Dimensionsreduktion færdig: {} punkter med {} dimensioner ({})",
-                punkter.length, punkter[0].length, reductionDescription);
-
-        // HDBSCAN grupperer lignende årsager. Hvert punkt får et cluster-id; -1 betyder støj.
-        log.info("Clustering: {}", clusterer.description());
-        int[] clusterIds = clusterer.cluster(punkter);
-
-        // Samler data midlertidigt, så vi kan finde eksempler fra hver gruppe til navngivning.
-        Map<Integer, ClusterName> navne = new TreeMap<>();
-        PipelineResult udenNavne = new PipelineResult(
-                samtaler, aarsager, forklaringer, clusterIds, navne);
-
-        // Modellen navngiver de grupper, HDBSCAN allerede har fundet, hvis navngivning er aktiveret.
-        // Støj får intet gruppenavn, da disse samtaler ikke tilhører en egentlig gruppe.
-        if (config.namingEnabled()) {
-            for (var gruppe : udenNavne.membersByCluster().entrySet()) {
-                if (gruppe.getKey() == Clusterer.NOISE) {
-                    continue;
+            List<Conversation> input = DatasetLoader.loadTransfers(config.datasetPath(), config.split());
+            inputCount = input.size();
+            List<Conversation> conversations = new ArrayList<>();
+            List<String> reasons = new ArrayList<>(), explanations = new ArrayList<>();
+            List<double[]> vectors = new ArrayList<>();
+            int dimensions = -1;
+            for (Conversation conversation : input) {
+                try {
+                    if (conversation.transcript().isBlank()) throw new IllegalArgumentException();
+                    TransferReason reason = config.mode() == PipelineConfig.PipelineMode.REASON_FIRST
+                            ? extractor.extractReason(conversation.transcript())
+                            : new TransferReason(conversation.transcript(), "");
+                    String text = config.mode() == PipelineConfig.PipelineMode.REASON_FIRST
+                            ? ReasonCleaner.clean(reason.primary()) : reason.primary();
+                    if (text == null || text.isBlank() || reason.explanation() == null)
+                        throw new IllegalArgumentException();
+                    List<double[]> embedded = embedder.embed(List.of(text));
+                    if (embedded.size() != 1) throw new IllegalArgumentException();
+                    double[] vector = embedded.getFirst();
+                    if (vector == null || vector.length == 0
+                            || (dimensions != -1 && vector.length != dimensions)
+                            || Arrays.stream(vector).anyMatch(v -> !Double.isFinite(v))
+                            || Arrays.stream(vector).allMatch(v -> v == 0))
+                        throw new IllegalArgumentException();
+                    dimensions = vector.length;
+                    // Tilføj først efter alle samtalens trin er lykkedes: indeks forbliver ens.
+                    conversations.add(conversation);
+                    reasons.add(text);
+                    explanations.add(reason.explanation());
+                    vectors.add(vector);
+                } catch (IOException | RuntimeException e) {
+                    errors++;
+                    log.warn("Samtale sprunget over: indeks={}, fejltype={}",
+                            conversations.size() + errors, e.getClass().getSimpleName());
                 }
-                List<String> eksempler = gruppe.getValue().stream()
-                        .map(udenNavne::displayText)
-                        .toList();
-                navne.put(gruppe.getKey(), namer.name(eksempler));
-                log.info("Navngivet cluster {}: {}", gruppe.getKey(), navne.get(gruppe.getKey()));
             }
+            double[][] normalized = VectorUtils.l2Normalize(vectors.toArray(new double[0][]));
+            Map<Integer, ClusterName> names = new TreeMap<>();
+            int[] ids = new int[0];
+            boolean fallback = false;
+            if (!conversations.isEmpty()) {
+                double[][] points;
+                try {
+                    points = reducer.reduce(normalized);
+                } catch (RuntimeException | LinkageError e) {
+                    fallback = true;
+                    log.warn("Dimensionsreduktion fejlede ({}); bruger fulde embeddings", e.getClass().getSimpleName());
+                    points = normalized;
+                }
+                ids = clusterer.cluster(points);
+                if (ids.length != conversations.size()) throw new IllegalStateException("Forkert antal cluster-id'er");
+                PipelineResult unnamed = new PipelineResult(conversations, reasons, explanations, ids, names);
+                if (config.namingEnabled()) {
+                    for (var group : unnamed.membersByCluster().entrySet()) {
+                        if (group.getKey() == Clusterer.NOISE) continue;
+                        try {
+                            names.put(group.getKey(), Objects.requireNonNull(namer.name(
+                                    group.getValue().stream().map(unnamed::displayText).toList())));
+                        } catch (IOException | RuntimeException e) {
+                            namingErrors++;
+                            names.put(group.getKey(), new ClusterName("Klynge " + group.getKey(), ""));
+                            log.warn("Navngivning fejlede for cluster {} ({})", group.getKey(), e.getClass().getSimpleName());
+                        }
+                    }
+                }
+            }
+            PipelineResult result = new PipelineResult(conversations, reasons, explanations, ids, names);
+            success = true;
+            log.warn("Neo4j-gemning mangler: A3-skriveren er endnu en stub");
+            return new AnalysisRun(result, normalized, inputCount, errors, namingErrors, fallback);
+        } finally {
+            log.info("Analyse slut: gennemført={}, indlæst={}, samtalefejl={}, navngivningsfejl={}",
+                    success, inputCount, errors, namingErrors);
+            running.set(false); // Også ved filfejl, afbrydelse og fejl i clustering.
         }
-
-        // Pakker samtaler, årsager, forklaringer, gruppe-id'er og navne i ét samlet resultat.
-        PipelineResult resultat = new PipelineResult(
-                samtaler, aarsager, forklaringer, clusterIds, navne);
-
-        long antalGrupper = resultat.membersByCluster().keySet().stream()
-                .filter(id -> id != Clusterer.NOISE)
-                .count();
-        int antalStoej = resultat.membersByCluster().getOrDefault(Clusterer.NOISE, List.of()).size();
-        log.info("Analyse færdig: {} samtaler, {} grupper, {} støj",
-                samtaler.size(), antalGrupper, antalStoej);
-        log.warn("Resultatet er ikke gemt i Neo4j: integration med A3 mangler endnu");
-        return resultat;
     }
 }
