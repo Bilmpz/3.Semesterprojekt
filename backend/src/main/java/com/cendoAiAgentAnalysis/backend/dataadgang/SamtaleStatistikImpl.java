@@ -25,7 +25,7 @@ public class SamtaleStatistikImpl implements SamtaleStatistik {
             WITH s, c
             WHERE $search = ''
               OR (c IS NOT NULL AND toLower(coalesce(c.navn, '')) CONTAINS toLower($search))
-            RETURN count(DISTINCT s) AS totalConversations,
+            RETURN count(DISTINCT s) AS totalConversations, 
                    count(DISTINCT c) AS causesFound
             """;
     // Henter top 5 årsager (clusters) for samtaler i den angivne periode, filtreret efter virksomhed og søgeord. Resultaterne sorteres efter antal samtaler og cluster-navn.
