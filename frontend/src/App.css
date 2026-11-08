@@ -15,7 +15,7 @@ button:hover { background: #f2f2f2; }
 .filters label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .filters .grow { flex: 1; }
 select, input { font: inherit; padding: 8px 10px; border: 1.5px solid #333; border-radius: 4px; min-width: 180px; }
-.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .kpi { display: flex; flex-direction: column; gap: 10px; }
 .kpi strong { font-size: 28px; }
 .warning { font-size: 14px; }
@@ -25,9 +25,11 @@ select, input { font: inherit; padding: 8px 10px; border: 1.5px solid #333; bord
 .bar { display: block; height: 100%; background: repeating-linear-gradient(45deg, #bbb 0 3px, #ddd 3px 7px); border: 1px solid #999; }
 .bar-value { text-align: right; }
 .hint, .muted { color: #666; font-size: 13px; }
-.chart { width: 100%; height: 160px; border-left: 1.5px solid #333; border-bottom: 1.5px solid #333; }
+.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart-axis { stroke: #333; stroke-width: 1.5; }
+.chart-grid { stroke: #ddd; stroke-width: 1; }
+.chart-label { fill: #555; font: 11px sans-serif; }
 .line { fill: none; stroke: #222; stroke-width: 2.5; }
-.dashed-line { stroke: #888; stroke-dasharray: 6 5; }
 .axis { display: flex; justify-content: space-between; font-size: 12px; margin-top: 4px; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .sort { display: flex; align-items: center; gap: 8px; font-size: 14px; }

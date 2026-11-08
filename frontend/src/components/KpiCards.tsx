@@ -6,9 +6,7 @@ export function KpiCards({ d }: { d: Dashboard }) {
   )
   return (
     <section className="kpis">
-      {kpi('Samtaler i alt', String(d.totalConversations))}
-      {kpi('Viderestillinger', String(d.transfers))}
-      {kpi('Viderestillingsrate', `${d.transferRate} %`)}
+      {kpi('Viderestillede samtaler', String(d.totalConversations))}
       {kpi('Fundne årsager', String(d.causesFound))}
     </section>
   )

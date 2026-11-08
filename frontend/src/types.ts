@@ -1,12 +1,29 @@
-// Samme felter som backendens DTO'er (backend/.../dto)
 
-export type Company = { id: string; name: string }
+// Datatyper til frontend.
+// Feltnavnene skal matche backendens JSON-svar.
 
-export type Cause = { id: string; title: string; count: number }
+// Kundeoplysninger til virksomhedsfilteret.
+export type Company = {
+  id: string
+  name: string
+}
 
-export type DayPoint = { date: string; conversations: number; transfers: number }
+// En viderestillingsårsag med antal samtaler.
+export type Cause = {
+  id: string
+  title: string
+  count: number
+}
 
-/** DashboardDto – GET /api/dashboard */
+// Statistik for én dag i dashboardets tidslinje.
+export type DayPoint = {
+  date: string
+  conversations: number
+  transfers: number
+}
+
+// Dashboardets samlede statistik.
+// Modtages fra GET /api/overblik.
 export type Dashboard = {
   totalConversations: number
   transfers: number
@@ -17,7 +34,8 @@ export type Dashboard = {
   timeline: DayPoint[]
 }
 
-/** ClusterDto – GET /api/clusters */
+// Et cluster med navn, beskrivelse og statistik.
+// Modtages fra GET /api/clusters.
 export type Cluster = {
   id: string
   title: string
@@ -27,7 +45,9 @@ export type Cluster = {
   trend: 'up' | 'down' | 'flat'
 }
 
-/** ConversationDto – GET /api/clusters/{id}/conversations */
+// En konkret samtale med årsag og forklaring.
+// Bruges både i clusteroversigten og ved visning
+// af en enkelt samtale.
 export type Conversation = {
   id: string
   timestamp: string
@@ -37,4 +57,10 @@ export type Conversation = {
   explanation: string
 }
 
-export type Filters = { companyId: string; days: number; search: string }
+// Filtre som sendes med API-kaldene.
+// Tomt companyId betyder alle virksomheder.
+export type Filters = {
+  companyId: string
+  days: number
+  search: string
+}
