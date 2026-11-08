@@ -23,6 +23,10 @@ public class Cluster {
 
     private int stoerrelse; // Antal samtaler i clusteret
 
+    private List<Double> centroide; // A6: gennemsnittet af clusterets vektorer
+
+    private boolean erNy; // A6: true, hvis clusteret ikke fandtes ved sidste kørsel
+
     // Tom konstruktør. Spring Data Neo4j bruger den, når den henter et cluster fra databasen
     protected Cluster() {
     }
