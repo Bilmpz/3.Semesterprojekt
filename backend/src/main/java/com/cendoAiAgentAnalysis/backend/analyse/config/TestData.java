@@ -1,5 +1,6 @@
 package com.cendoAiAgentAnalysis.backend.analyse.config;
 
+//Giver overordnet test klassen adgang til de forskellige repositories og modeller, så vi kan oprette testdata i databasen ved opstart af applikationen.
 import com.cendoAiAgentAnalysis.backend.dataadgang.AiAgentRepository;
 import com.cendoAiAgentAnalysis.backend.dataadgang.ClusterRepository;
 import com.cendoAiAgentAnalysis.backend.dataadgang.KundeRepository;
@@ -19,6 +20,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+//Denne test klasse gemmer demo-kunder, Ai-agenter og virksomheder, opretter rem demo-clusters og gemmer 15 demo-samtaler fordelt mellem dem
+// Hver gang applikationen startes, vil den rydde de eksisterende demo-virksomhedsrelationer, så vi starter med en ren database.
+// Hver demo-samtale har et kluster, en kunde og en Ai-agent. Demosamtalerne hører til kunde 1 og agent 1 som forbindes med virksomheden Værksted Nord
+// Bilhuset Syd forbindes med kunde 2 og agent 2, men har ingen demo-samtaler. Dermed kan man teste at overblikket kun viser samtaler for den virksomhed man er logget ind som.
 @Component
 public class TestData implements CommandLineRunner {
 
@@ -47,6 +52,7 @@ public class TestData implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        //Fjerner data der allerrade er i databasen, så vi kan starte med en ren database hver gang applikationen startes.
         rydDemoVirksomhedsrelationer();
 
         // Create and save test customers
@@ -100,6 +106,7 @@ public class TestData implements CommandLineRunner {
                 )
         );
 
+        // Prints the saved companies to the console
         System.out.println("\nVirksomheder");
         virksomhedRepository.findAll().forEach(virksomhed ->
                 System.out.println(

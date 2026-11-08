@@ -6,7 +6,6 @@ package com.cendoAiAgentAnalysis.backend.web;
 
 import com.cendoAiAgentAnalysis.backend.dataadgang.KundeRepository;
 import com.cendoAiAgentAnalysis.backend.dataadgang.SamtaleRepository;
-import com.cendoAiAgentAnalysis.backend.dataadgang.SamtaleStatistik.DayCount;
 import com.cendoAiAgentAnalysis.backend.dataadgang.SamtaleStatistik.OverblikTal;
 import com.cendoAiAgentAnalysis.backend.dataadgang.VirksomhedRepository;
 import com.cendoAiAgentAnalysis.backend.web.dto.OverblikDto;
@@ -17,12 +16,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController //Denne klasse fungerer som en REST-controller, der modtager HTTP-requests og returnerer data
 @RequestMapping("/api") //Angiver, at alle endpoints i denne controller vil have præfikset /api
@@ -76,14 +71,12 @@ public class OverblikController {
                         cause.title(),
                         Math.toIntExact(cause.count())))
                 .toList();
-        Map<LocalDate, Integer> conversationsByDay = samtaleRepository
-                .hentSamtalerPrDag(companyId, fra, til, search)
+        List<OverblikDto.TimelinePointDto> timeline = samtaleRepository.hentSamtalerPrDag(companyId, fra, til, search)
                 .stream()
-                .collect(Collectors.toMap(DayCount::date, day -> Math.toIntExact(day.conversations())));
-        List<OverblikDto.TimelinePointDto> timeline = new ArrayList<>();
-        for (LocalDate date = fra.toLocalDate(); !date.isAfter(til.toLocalDate()); date = date.plusDays(1)) {
-            timeline.add(new OverblikDto.TimelinePointDto(date, conversationsByDay.getOrDefault(date, 0)));
-        }
+                .map(day -> new OverblikDto.TimelinePointDto(
+                        day.date(),
+                        Math.toIntExact(day.conversations())))
+                .toList();
 
         return new OverblikDto(
                 Math.toIntExact(tal.totalConversations()),
