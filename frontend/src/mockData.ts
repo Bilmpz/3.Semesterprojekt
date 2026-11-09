@@ -1,6 +1,7 @@
-// Falske data, indtil backend er klar
+
 import type { Cluster, Company, Conversation, Dashboard } from './types'
 
+// Falske data, indtil backend er klar
 export const companies: Company[] = [
   { id: 'v1', name: 'Værksted Nord' },
   { id: 'v2', name: 'Bilhuset Syd' },
@@ -16,31 +17,44 @@ export const clusters: Cluster[] = [
   { id: 'c7', title: 'Lånebil', description: 'Spørgsmål om lånebil under reparation', count: 6, share: 5, trend: 'up' },
 ]
 
+// Eksempeldata til grafen med antal samtaler og viderestillinger
 const timeline = Array.from({ length: 10 }, (_, i) => ({
   date: `2026-10-${String(i + 1).padStart(2, '0')}`,
   conversations: 40 + i * 4 + (i % 3) * 6,
-  transfers: 10 + i + (i % 2) * 3,
+  transfers: 10 + i * 2,
 }))
 
+// Eksempeldata til dashboardet
 export const dashboard: Dashboard = {
   totalConversations: 500,
-  transfers: 113,
-  transferRate: 23,
+  transfers: 120,
+  transferRate: 24,
   causesFound: clusters.length,
   lowData: false,
-  topCauses: clusters.slice(0, 5).map((c) => ({ id: c.id, title: c.title, count: c.count })),
+  topCauses: clusters.slice(0, 5).map((c) => ({
+    id: c.id,
+    title: c.title,
+    count: c.count,
+  })),
   timeline,
 }
 
+// Eksempelsamtaler til visning af clusterets detaljer
 export const conversations: Conversation[] = [
   {
-    id: 's1', timestamp: '2026-10-03T09:12:00Z', company: 'Værksted Nord',
+    id: 's1',
+    timestamp: '2026-10-03T09:12:00Z',
+    company: 'Værksted Nord',
     transcript: 'Agent: Hej, du taler med værkstedets assistent.\nKunde: Hej, jeg vil høre, om min bil er færdig?\nAgent: Det kan jeg desværre ikke se. Jeg stiller dig videre.',
-    reason: 'Status på reparation', explanation: 'Agenten har ikke adgang til værkstedets status.',
+    reason: 'Status på reparation',
+    explanation: 'Agenten har ikke adgang til værkstedets status.',
   },
   {
-    id: 's2', timestamp: '2026-10-05T14:40:00Z', company: 'Bilhuset Syd',
+    id: 's2',
+    timestamp: '2026-10-05T14:40:00Z',
+    company: 'Bilhuset Syd',
     transcript: 'Agent: Hej, hvad kan jeg hjælpe med?\nKunde: Hvornår kan jeg hente bilen?\nAgent: Jeg stiller dig videre til en medarbejder.',
-    reason: 'Status på reparation', explanation: 'Agenten kan ikke slå reparationer op.',
+    reason: 'Status på reparation',
+    explanation: 'Agenten kan ikke slå reparationer op.',
   },
 ]

@@ -23,6 +23,7 @@ import com.cendoAiAgentAnalysis.backend.analyse.reduction.DimensionReducer;
 import com.cendoAiAgentAnalysis.backend.analyse.reduction.NoReduction;
 import com.cendoAiAgentAnalysis.backend.analyse.reduction.UmapReducer;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import java.io.IOException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,8 +34,16 @@ import java.util.Properties;
 @Configuration //"omkapsler" den del som skal konfigureres af Spring
 
 public class PluginConfig {
+    @Bean
+    public PipelineCli pipeline(PipelineConfig cfg, ObjectMapper mapper, ReasonExtractor extractor,
+                                Embedder embedder, DimensionReducer reducer, Clusterer clusterer,
+                                ClusterNamer namer) {
+        return new PipelineCli(cfg, mapper, extractor, embedder, reducer, clusterer, namer);
+    }
+
 
     @Bean //Konfigurationen
+    @ConditionalOnMissingBean(PipelineConfig.class)
     public PipelineConfig pipelineConfig(Environment env) {
         Properties p = new Properties();
 

@@ -11,7 +11,9 @@ public class Anonymizer {
 
     // Metoden tager en samtale (tekst) og giver en "renset" version tilbage,
     // hvor følsomme ting er skiftet ud med fx [TLF] eller [EMAIL].
-    public static String anonymize(String tekst) {
+
+    
+    public static String anonymize(String tekst) { // "tekst" skal jo machte det vi får databasen
 
         // Hvis der ikke er nogen tekst, er der intet at rense
         if (tekst == null) {
