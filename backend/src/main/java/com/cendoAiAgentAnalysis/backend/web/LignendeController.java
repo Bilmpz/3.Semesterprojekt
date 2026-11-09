@@ -14,7 +14,8 @@ import java.util.*;
 @RestController
 @RequestMapping("/api")
 public class LignendeController {
-
+    // test
+    
     // Det vi sender til frontend (aldrig transcript – GDPR)
     public record LignendeDto(String id, String aarsag, double lighed) {}
 

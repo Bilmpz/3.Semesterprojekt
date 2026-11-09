@@ -182,7 +182,7 @@ public class Neo4jResultWriter {
                             size
                     );
 
-                    // A6: gem centroiden og om årsagen er ny
+                    // gem centroiden og om årsagen er ny
                     double[] centroide = nyeCentroider.get(clusterId);
                     if (centroide != null) {
                         cluster.setCentroide(VectorUtils.tilListe(centroide));
