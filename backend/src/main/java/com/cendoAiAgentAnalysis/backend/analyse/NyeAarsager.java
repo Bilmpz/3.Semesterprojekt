@@ -14,6 +14,9 @@ import java.util.Set;           // Interface for sæt
 import java.util.TreeMap;       // Et map, der holder nøglerne sorteret (0, 1, 2 ...)
 
 
+//NyeAarsager finder midtpunktet af hvert cluster og markerer det som en ny årsag, 
+// hvis det ligner et cluster fra sidste kørsel mindre end 80 %.
+
 public class NyeAarsager {
     // 0.8 betyder: ligner et nyt cluster et gammelt MINDRE end 80 %, er det nyt.
     public static final double STANDARD_GRAENSE = 0.8;
@@ -27,13 +30,8 @@ public class NyeAarsager {
         this.graense = graense;
     }
 
-    /**
-     * Beregner én centroide (gennemsnitsvektor) pr. cluster. Støj (-1) springes over.
-     *
-     * @param vektorer   én vektor pr. samtale (768 tal hver)
-     * @param clusterIds cluster-id pr. samtale. Plads i i begge arrays = samme samtale
-     * @return map: 
-     */
+    // Beregner én (gennemsnitsvektor) pr. cluster. Støj (-1) springes over.
+
     public Map<Integer, double[]> centroider(double[][] vektorer, int[] clusterIds) {
 
         // Sikkerhedstjek: er der 4 vektorer, skal der også være 4 cluster-id'er
@@ -50,7 +48,7 @@ public class NyeAarsager {
         for (int i = 0; i < vektorer.length; i++) { // gå gennem samtalerne én ad gangen
             int id = clusterIds[i];                   // hvilket cluster hører samtale i til?
 
-            if (id == Clusterer.NOISE) { // -1 = støj, hører ikke til noget cluster
+            if (id == Clusterer.NOISE) { // -1 = støj, hører ikke til noget cluster - er beskrevet i clusterer.java
                 continue;              
             }
 

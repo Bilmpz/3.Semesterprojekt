@@ -3,6 +3,29 @@ package com.cendoAiAgentAnalysis.backend.analyse.util;
 import java.util.ArrayList;   
 import java.util.List;     
 
+
+/**
+ * VectorUtils – små regne-hjælpere til vektorer.
+ *
+ * En vektor er en liste af tal, der beskriver hvad en samtale handler om.
+ * Vektorerne bliver lavet af Embedder. Denne klasse regner bare på dem.
+ *
+ * l2Normalize – gør alle vektorer lige lange, så vi kun sammenligner
+ *               hvad samtalerne handler om, ikke hvor lange de er.
+ *
+ * cosine      – giver et tal for hvor meget to vektorer ligner hinanden.
+ *               1 = næsten samme årsag, 0 = intet til fælles.
+ *               A6 bruger det til at se om et cluster er nyt.
+ *               V1 bruger det til at finde lignende samtaler.
+ *
+ * tilListe    – laver vektoren om til en liste, fordi Neo4j kun kan gemme lister.
+ *
+ * tilArray    – laver listen tilbage til en vektor, når vi har hentet den
+ *               fra Neo4j og skal regne på den igen.
+ */
+
+
+
 public final class VectorUtils {
     private VectorUtils() {
     }
