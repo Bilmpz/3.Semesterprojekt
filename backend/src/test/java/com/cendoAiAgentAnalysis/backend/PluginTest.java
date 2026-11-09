@@ -11,6 +11,9 @@ import java.nio.file.Path;
 import java.util.Properties;
 import java.util.Arrays;
 
+import com.cendoAiAgentAnalysis.backend.analyse.config.ProviderFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import com.cendoAiAgentAnalysis.backend.analyse.clustering.Clusterer;
 import com.cendoAiAgentAnalysis.backend.analyse.embedding.Embedder;
@@ -30,7 +33,7 @@ class PluginTest {
         @Override //implementerer interfacets metode
         public List<double[]> embed(List<String> texts) { //laver fake metode til testen - en ollama-embedder har sin egen implementering. Alle bruger samme interface, så resten af systemet kan bruge dem på samme måde.
             return texts.stream()//gennemgår teksterne én ad gangen -metode fra java
-                    .map(text -> new double[]{1.0, 2.0, 3.0}) //Omdanner hver tekst om til en kunstig vektor
+                    .map(text -> new double[]{1.0, 2.0, 3.0}) //Omdanner hver tekst om til en kunstig vektor - her med 3 dimensioner
                     .toList(); //samler resultaterne i en ny liste.
         }
 
@@ -87,26 +90,27 @@ class PluginTest {
 
     /* TEST AF CLUSTER-PLUGIN */
 
+    /* TEST AF RIGTIG PIPELINE KAN BRUGE FALSK PLUGIN / FAKE EMBEDDER - ALTSÅ UDSKIFTELIGHED */
 
     @Test
     void rigtigPipelineKanBrugeFakeEmbedder() throws Exception {
-        // 1. Indlæs projektets konfiguration
-        Properties properties = new Properties();
+        Properties properties = new Properties();  // Indlæser projektets konfiguration af indstillinger
 
         try (var reader = java.nio.file.Files.newBufferedReader(
-                Path.of("config.properties"))) {
+                Path.of("config.properties"))) { // når vi som i test lige må oprette objekterne selv, læser vi dem fra config.properties
             properties.load(reader);
         }
 
-        // 2. Undgå at kalde Ollama
-        properties.setProperty("pipeline.mode", "FULL_TRANSCRIPT");
-        properties.setProperty("naming.enabled", "false");
-        properties.setProperty("dataset.split", "train");
+        // Undgå at kalde Ollama ved at ændre i nogle af indstillingerne som ellers læses.
 
-        PipelineConfig config = PipelineConfig.fromProperties(properties);
+        properties.setProperty("pipeline.mode", "FULL_TRANSCRIPT"); //bruger samtaleteksten i stedet for først at bede AI om at udtrække årsagen.
+        properties.setProperty("naming.enabled", "false"); //slår navngivning af grupper fra
+        properties.setProperty("dataset.split", "train"); //bruger træningsdelen af excel datasaættet
 
-        // 3. Brug vores FakeEmbedder i den rigtige pipeline
-        Embedder fakeEmbedder = new FakeEmbedder();
+        PipelineConfig config = PipelineConfig.fromProperties(properties); //opretter konfigurationen ud fra indstillinger
+
+
+        Embedder fakeEmbedder = new FakeEmbedder(); // Bruger vores FakeEmbedder i den rigtige pipeline
 
         DimensionReducer fakeReducer = new DimensionReducer() {
             @Override
@@ -115,7 +119,7 @@ class PluginTest {
             }
 
             @Override
-            public String description() {
+            public String description() { //beskriver hvilken plugin implementering vi bruger
                 return "Fake reducer";
             }
         };
@@ -129,28 +133,64 @@ class PluginTest {
             }
 
             @Override
-            public String description() {
+            public String description() { //beskriver hvilken plugin implementering vi bruger
                 return "Fake clusterer";
             }
         };
 
-        AnalyseService pipeline = new AnalyseService(
-                config,
-                text -> new TransferReason(text, ""),
-                fakeEmbedder,
-                fakeReducer,
-                fakeClusterer,
-                examples -> null
+        AnalyseService pipeline = new AnalyseService( //Vi tester pipelinen og ikke AI-modellerne
+                config,                                     //indstillingerne
+                text -> new TransferReason(text, ""),       //Falsk årsagsudtrækker - bruger teksten direkte som årsag og en tom forklaring
+                fakeEmbedder,                               //omdanner tekst til kunstige talvektorer
+                fakeReducer,                                //Returnerer vektoreren uændret
+                fakeClusterer,                              //Placerer all punkter i samme gruppe
+                examples -> null                            //Falsk clusternavn og returnerer intet navn.
         );
 
-        // 4. Kør den rigtige analyse
-        var resultat = pipeline.koerAnalyseMedDetaljer();
+        // Kører den rigtige analyseservice med falske plugins og gemmer resultatet
+        var resultat = pipeline.koerAnalyseMedDetaljer();   // var - java finder selv ud af variablens type som bliver returneret.
 
-        // 5. Kontrollér resultatet med JUnit
-        assertTrue(resultat.inputCount() > 0);
-        assertEquals(0, resultat.conversationErrors());
-        assertEquals(resultat.inputCount(), resultat.embeddings().length);
-        assertEquals(3, resultat.embeddings()[0].length);
+        // Kontrollérer resultatet med JUnit
+        assertTrue(resultat.inputCount() > 0);              //kontrollerer at der bliver indlæst samtaler
+        assertEquals(0, resultat.conversationErrors());     //ingen samtaler fejler
+        assertEquals(resultat.inputCount(), resultat.embeddings().length);      //intallet af embeddingvektorer er samme som antal samtaler
+        assertEquals(3, resultat.embeddings()[0].length);   //dimensioner (som forventes at være 3 - ud fra vores fakeEmbedder)
     }
+
+    /* TEST AF RIGTIG PIPELINE KAN BRUGE FALSK PLUGIN / FAKE EMBEDDER - ALTSÅ UDSKIFTELIGHED */
+
+
+
+    /* TEST AF RIGTIG EMBEDDER - RETURNERER 768 DIMENSIONER? */
+
+    @Test
+    @EnabledIfEnvironmentVariable(          // køres naturligvis kun hvis miljøvariablen er enabed
+            named = "RUN_OLLAMA_TESTS",
+            matches = "true"
+    )
+    void rigtigEmbedderReturnerer768Dimensioner() throws Exception {
+
+        // Henter konfiguration - indstillingerne
+        PipelineConfig config = PipelineConfig.load(
+                Path.of("config.properties")    //når vi selv oprettet objekter, henter vi dem herfra frem for Spring
+        );
+
+
+        Embedder embedder = ProviderFactory.embedder(   // Opretter den rigtige embedder via ProviderFactory, som konfigurationen angiver - her OllamaEmbedder
+                config,
+                new ObjectMapper()                      // til håndtering af JSON, når vi kommunikerer med Ollama
+        );
+
+
+        List<double[]> result = embedder.embed(         //sender én tekst til ollamamodellen og får en embedding tilbage
+                List.of("Hej, jeg vil gerne viderestilles")
+        );
+
+        // Kontrollér resultatet med JUnit - hvis begge passer, består testen selvfølgelig.
+        assertEquals(1, result.size());                  //Én tekst -> én vektor
+        assertEquals(768, result.get(0).length);         //første vektor skal indeholde 768 tal
+    }
+
+    /* TEST AF RIGTIG EMBEDDER - RETURNERER 768 DIMENSIONER? */
 
 }
