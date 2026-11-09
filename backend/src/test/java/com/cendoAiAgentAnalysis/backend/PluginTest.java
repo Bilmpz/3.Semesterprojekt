@@ -1,7 +1,16 @@
 // ID:          E1
 // Hvad:        Test hvert plug-in alene (ReasonExtractor, Embedder, DimensionReducer, Clusterer, ClusterNamer) og at et plug-in kan udskiftes uden ændringer andre steder (designmål 2).
-
 package com.cendoAiAgentAnalysis.backend;
+
+import com.cendoAiAgentAnalysis.backend.analyse.AnalyseService;
+import com.cendoAiAgentAnalysis.backend.analyse.config.PipelineConfig;
+import com.cendoAiAgentAnalysis.backend.analyse.model.TransferReason;
+import com.cendoAiAgentAnalysis.backend.analyse.reduction.DimensionReducer;
+
+import java.nio.file.Path;
+import java.util.Properties;
+import java.util.Arrays;
+
 
 import com.cendoAiAgentAnalysis.backend.analyse.clustering.Clusterer;
 import com.cendoAiAgentAnalysis.backend.analyse.embedding.Embedder;
@@ -78,5 +87,70 @@ class PluginTest {
 
     /* TEST AF CLUSTER-PLUGIN */
 
+
+    @Test
+    void rigtigPipelineKanBrugeFakeEmbedder() throws Exception {
+        // 1. Indlæs projektets konfiguration
+        Properties properties = new Properties();
+
+        try (var reader = java.nio.file.Files.newBufferedReader(
+                Path.of("config.properties"))) {
+            properties.load(reader);
+        }
+
+        // 2. Undgå at kalde Ollama
+        properties.setProperty("pipeline.mode", "FULL_TRANSCRIPT");
+        properties.setProperty("naming.enabled", "false");
+        properties.setProperty("dataset.split", "train");
+
+        PipelineConfig config = PipelineConfig.fromProperties(properties);
+
+        // 3. Brug vores FakeEmbedder i den rigtige pipeline
+        Embedder fakeEmbedder = new FakeEmbedder();
+
+        DimensionReducer fakeReducer = new DimensionReducer() {
+            @Override
+            public double[][] reduce(double[][] vectors) {
+                return vectors;
+            }
+
+            @Override
+            public String description() {
+                return "Fake reducer";
+            }
+        };
+
+        Clusterer fakeClusterer = new Clusterer() {
+            @Override
+            public int[] cluster(double[][] points) {
+                int[] labels = new int[points.length];
+                Arrays.fill(labels, 0);
+                return labels;
+            }
+
+            @Override
+            public String description() {
+                return "Fake clusterer";
+            }
+        };
+
+        AnalyseService pipeline = new AnalyseService(
+                config,
+                text -> new TransferReason(text, ""),
+                fakeEmbedder,
+                fakeReducer,
+                fakeClusterer,
+                examples -> null
+        );
+
+        // 4. Kør den rigtige analyse
+        var resultat = pipeline.koerAnalyseMedDetaljer();
+
+        // 5. Kontrollér resultatet med JUnit
+        assertTrue(resultat.inputCount() > 0);
+        assertEquals(0, resultat.conversationErrors());
+        assertEquals(resultat.inputCount(), resultat.embeddings().length);
+        assertEquals(3, resultat.embeddings()[0].length);
+    }
 
 }
