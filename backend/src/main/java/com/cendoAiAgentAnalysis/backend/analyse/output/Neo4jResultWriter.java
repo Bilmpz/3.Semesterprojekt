@@ -3,6 +3,8 @@ package com.cendoAiAgentAnalysis.backend.analyse.output;
 
 import com.cendoAiAgentAnalysis.backend.analyse.model.ClusterName;
 import com.cendoAiAgentAnalysis.backend.analyse.model.PipelineResult;
+import com.cendoAiAgentAnalysis.backend.analyse.NyeAarsager;
+import com.cendoAiAgentAnalysis.backend.analyse.util.VectorUtils;
 import com.cendoAiAgentAnalysis.backend.dataadgang.ClusterRepository;
 import com.cendoAiAgentAnalysis.backend.dataadgang.SamtaleRepository;
 import com.cendoAiAgentAnalysis.backend.model.Cluster;
@@ -11,7 +13,10 @@ import com.cendoAiAgentAnalysis.backend.model.Samtale;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.Objects;
 
@@ -35,6 +40,13 @@ public class Neo4jResultWriter {
     // Transactional sikrer, at ændringer rulles tilbage ved fejl
     @Transactional
     public void write(PipelineResult result) {
+        write(result, null); // Gammel måde: uden vektorer (tests bruger stadig denne)
+    }
+
+    // A6 + V1: samme som write(result), men gemmer også embedding på Samtale
+    // og centroide + erNy på Cluster. embeddings[i] hører til samtale i.
+    @Transactional
+    public void write(PipelineResult result, double[][] embeddings) {
 
         // Kontrollerer at analyseresultatet ikke er null
         Objects.requireNonNull(
@@ -75,6 +87,26 @@ public class Neo4jResultWriter {
         // én gang under den aktuelle gennemløbning
         Map<Integer, Cluster> savedClusters = new HashMap<>();
 
+        // A6: find centroider for denne kørsel og sammenlign med sidste kørsel
+        Map<Integer, double[]> nyeCentroider = new HashMap<>();
+        Set<Integer> nyeIds = Set.of();
+        if (embeddings != null) {
+            if (embeddings.length != conversationCount) {
+                throw new IllegalArgumentException("Antal embeddings passer ikke med antal samtaler");
+            }
+            NyeAarsager nyeAarsager = new NyeAarsager();
+            nyeCentroider = nyeAarsager.centroider(embeddings, result.clusterIds());
+
+            // Hent gamle centroider FØR vi gemmer nye clusters
+            List<double[]> gamle = new ArrayList<>();
+            for (Cluster gammel : clusterRepository.findAll()) {
+                if (gammel.getCentroide() != null && !gammel.getCentroide().isEmpty()) {
+                    gamle.add(VectorUtils.tilArray(gammel.getCentroide()));
+                }
+            }
+            nyeIds = nyeAarsager.findNye(nyeCentroider, gamle);
+        }
+
         // Gennemgår alle samtaler fra pipelinen
         for (int i = 0; i < conversationCount; i++) {
 
@@ -105,6 +137,11 @@ public class Neo4jResultWriter {
             samtale.setTranscript(conversation.transcript());
             samtale.setViderestillingsaarsag(reason);
             samtale.setForklaring(explanation);
+
+            // V1: gem vektoren, så Neo4j kan finde lignende samtaler
+            if (embeddings != null) {
+                samtale.setEmbedding(VectorUtils.tilListe(embeddings[i]));
+            }
 
             // Fjerner den tidligere clusterreference i objektet
             // Den nye relation gemmes sammen med samtalen
@@ -144,6 +181,13 @@ public class Neo4jResultWriter {
                             description,
                             size
                     );
+
+                    // A6: gem centroiden og om årsagen er ny
+                    double[] centroide = nyeCentroider.get(clusterId);
+                    if (centroide != null) {
+                        cluster.setCentroide(VectorUtils.tilListe(centroide));
+                    }
+                    cluster.setErNy(nyeIds.contains(clusterId));
 
                     // Gemmer clusteret i Neo4j
                     cluster = clusterRepository.save(cluster);
