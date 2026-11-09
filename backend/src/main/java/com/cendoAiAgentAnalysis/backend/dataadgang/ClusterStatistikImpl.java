@@ -36,6 +36,17 @@ public class ClusterStatistikImpl implements ClusterStatistik {
             ORDER BY antal DESC, navn ASC
             """;
 
+
+    // E2b: samtalerne i ét cluster + virksomhedsnavn i én forespørgsel
+    private static final String SAMTALER_I_CLUSTER = """
+            MATCH (s:Samtale)-[:TILHOERER]->(:Cluster {id: $clusterId})
+            OPTIONAL MATCH (v:Virksomhed)-[:HAR_KUNDE]->(:Kunde)-[:HAR]->(s)
+            WITH s, head(collect(v.navn)) AS virksomhed
+            RETURN s.id AS id, s.tidspunkt AS tidspunkt, coalesce(virksomhed, '') AS virksomhed,
+                   s.transcript AS transcript, s.viderestillingsaarsag AS aarsag, s.forklaring AS forklaring
+            ORDER BY s.tidspunkt DESC
+            """;
+
     private final Neo4jClient neo4jClient; // Forbindelsen til Neo4j
 
     // Spring giver os selv en Neo4jClient (dependency injection)
@@ -76,5 +87,22 @@ public class ClusterStatistikImpl implements ClusterStatistik {
                         raekke.get("antal").asLong()))
                 .all();                             // Kør og hent alle rækker
         return new ArrayList<>(resultat);           // Returnér som almindelig liste
+    }
+
+    @Override
+    public List<SamtaleRaekke> hentSamtalerICluster(String clusterId) {
+        var resultat = neo4jClient
+                .query(SAMTALER_I_CLUSTER)
+                .bind(clusterId).to("clusterId")
+                .fetchAs(SamtaleRaekke.class)
+                .mappedBy((typeSystem, raekke) -> new SamtaleRaekke(
+                        raekke.get("id").asString(),
+                        raekke.get("tidspunkt").isNull() ? null : raekke.get("tidspunkt").asLocalDateTime(),
+                        raekke.get("virksomhed").asString(""),
+                        raekke.get("transcript").asString(""),
+                        raekke.get("aarsag").asString(""),
+                        raekke.get("forklaring").asString("")))
+                .all();
+        return new ArrayList<>(resultat);
     }
 }

@@ -19,4 +19,14 @@ public interface ClusterStatistik {
     record ClusterTal(String id, String navn, String beskrivelse, long antal) {
     }
 
+
+    // W2/E2b: alle samtaler i ét cluster med virksomhedens navn, i ÉN forespørgsel (nyeste først).
+    // Erstatter at slå virksomheden op for hver samtale (N+1-problemet fundet i svartidstesten).
+    List<SamtaleRaekke> hentSamtalerICluster(String clusterId);
+
+    // Én samtale med det, frontend skal bruge
+    record SamtaleRaekke(String id, LocalDateTime tidspunkt, String virksomhed,
+                         String transcript, String aarsag, String forklaring) {
+    }
+
 }
