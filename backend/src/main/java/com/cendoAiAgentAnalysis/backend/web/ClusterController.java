@@ -5,6 +5,7 @@
 
 
 package com.cendoAiAgentAnalysis.backend.web;
+import com.cendoAiAgentAnalysis.backend.dataadgang.ClusterStatistik.SamtaleRaekke;
 
 import com.cendoAiAgentAnalysis.backend.dataadgang.ClusterRepository;
 import com.cendoAiAgentAnalysis.backend.dataadgang.SamtaleRepository;
@@ -20,7 +21,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.stream.Collectors;
 import com.cendoAiAgentAnalysis.backend.analyse.data.Anonymizer;
-import com.cendoAiAgentAnalysis.backend.model.Samtale;
 import com.cendoAiAgentAnalysis.backend.web.dto.SamtaleDto;
 import org.springframework.web.bind.annotation.PathVariable;
 import java.time.LocalDateTime;
@@ -81,7 +81,6 @@ public class ClusterController {
                 .toList();
     }
 
-
     // UC2: GET /api/clusters/{id}/samtaler – samtalerne i ét cluster ("Åbn →"), nyeste først.
     // {id} i URL'en bliver til parameteren id, fx /api/clusters/test-c0/samtaler -> id = "test-c0"
     @GetMapping("/clusters/{id}/samtaler")
@@ -92,23 +91,19 @@ public class ClusterController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Clusteret med id " + id + " findes ikke");
         }
 
-        // Din metode fra D2: alle samtaler i clusteret, nyeste først
-        List<Samtale> samtaler = samtaleRepository.findByClusterIdOrderByTidspunktDesc(id);
-
-        // Lav hver Samtale om til en SamtaleDto – samme måde som HC gør i SamtaleController
-        return samtaler.stream()
-                .map(s -> {
-                    String virksomhed = samtaleRepository.findVirksomhedsnavn(s.getId());
-                    return new SamtaleDto(
-                            s.getId(),
-                            s.getTidspunkt(),
-                            virksomhed != null ? virksomhed : "",       // company
-                            Anonymizer.anonymize(s.getTranscript()),   // transcript, altid anonymiseret
-                            s.getViderestillingsaarsag(),              // reason
-                            s.getForklaring());                        // explanation
-                })
+        // Én forespørgsel henter samtalerne OG virksomhedens navn.
+        // Før: én ekstra forespørgsel pr. samtale (N+1-problemet fundet i svartidstesten, E2b)
+        return clusterRepository.hentSamtalerICluster(id).stream()
+                .map(r -> new SamtaleDto(
+                        r.id(),
+                        r.tidspunkt(),
+                        r.virksomhed(),                        // company
+                        Anonymizer.anonymize(r.transcript()),  // transcript, altid anonymiseret
+                        r.aarsag(),                            // reason
+                        r.forklaring()))                       // explanation
                 .toList();
     }
+
 
     // Andel i hele procent: antal / total * 100, afrundet. Giver 0, hvis der ingen samtaler er.
     private long andel(long antal, long total) {
