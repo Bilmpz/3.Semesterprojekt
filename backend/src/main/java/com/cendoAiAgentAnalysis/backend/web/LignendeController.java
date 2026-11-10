@@ -11,10 +11,22 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
+
+/**
+ * LignendeController – V1: finder samtaler, der ligner hinanden.
+ *
+ * Frontend kalder: GET /api/samtaler/{id}/lignende
+ *
+ * 1. Henter den valgte samtale og dens vektor (findes den ikke: fejl 404).
+ * 2. Sammenligner vektoren med alle andre samtalers vektorer med cosine.
+ * 3. Sorterer, så den mest lignende kommer først, og sender de 5 bedste tilbage.
+ *
+ * Frontend får kun id, årsag og lighed – aldrig selve samtaleteksten (GDPR).
+ */
+
 @RestController
 @RequestMapping("/api")
 public class LignendeController {
-
     // Det vi sender til frontend (aldrig transcript – GDPR)
     public record LignendeDto(String id, String aarsag, double lighed) {}
 

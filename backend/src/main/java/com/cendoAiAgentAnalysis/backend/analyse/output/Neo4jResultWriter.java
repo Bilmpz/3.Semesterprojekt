@@ -20,6 +20,20 @@ import java.util.Set;
 import java.util.Map;
 import java.util.Objects;
 
+
+/**
+ * Neo4jResultWriter – gemmer analyseresultatet i Neo4j.
+ *
+ * 1. Tjekker at data er i orden.
+ * 2. finder clusters, der ikke fandtes sidste gang (via NyeAarsager).
+ * 3. Gemmer hver samtale, og forbinder den til sit cluster.
+ *    gemmer også samtalens vektor, så vi kan finde lignende samtaler.
+ *    giver hvert cluster sit midtpunkt og markerer det som nyt (erNy).
+ *
+ * write(result) uden vektorer virker som før – så springes A6 og V1 over.
+ */
+
+
 @Component
 public class Neo4jResultWriter {
 
@@ -182,7 +196,7 @@ public class Neo4jResultWriter {
                             size
                     );
 
-                    // A6: gem centroiden og om årsagen er ny
+                    // gem centroiden og om årsagen er ny
                     double[] centroide = nyeCentroider.get(clusterId);
                     if (centroide != null) {
                         cluster.setCentroide(VectorUtils.tilListe(centroide));

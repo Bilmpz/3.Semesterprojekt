@@ -1,6 +1,12 @@
 // ID: A6 (kobling)
-// Kører analysen og gemmer resultatet i Neo4j – inkl. embeddings (V1) og nye årsager (A6).
-// Ny klasse, så AnalyseService og dens tests ikke ændres.
+
+
+
+
+// Kører analysen og gemmer resultatet i Neo4j - Altså den analyseservice som jonathan har lavet. 
+//Vi bruer det så i ligne samtaler og vectorutils 
+
+
 package com.cendoAiAgentAnalysis.backend.analyse;
 
 import com.cendoAiAgentAnalysis.backend.analyse.output.Neo4jResultWriter;

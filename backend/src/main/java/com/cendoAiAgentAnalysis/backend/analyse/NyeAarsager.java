@@ -1,10 +1,10 @@
 // ID:          A6
 // Delsystem:   Analyse
 // Hvad:        Finder clusters, der er dukket op siden sidste kørsel (scenarie 2: nye mønstre).
-package com.cendoAiAgentAnalysis.backend.analyse; // Klassen ligger i mappen analyse
+package com.cendoAiAgentAnalysis.backend.analyse;
 
-import com.cendoAiAgentAnalysis.backend.analyse.clustering.Clusterer; // Bruges til Clusterer.NOISE (= -1, støj)
-import com.cendoAiAgentAnalysis.backend.analyse.util.VectorUtils;     // Hjælpefunktioner: normalisering og cosine
+import com.cendoAiAgentAnalysis.backend.analyse.clustering.Clusterer; 
+import com.cendoAiAgentAnalysis.backend.analyse.util.VectorUtils;     
 
 import java.util.Collection;    // En samling af ting (fx en liste) – bruges til de gamle centroider
 import java.util.HashSet;       // Et sæt uden dubletter – bruges til id'erne på nye clusters
@@ -14,45 +14,24 @@ import java.util.Set;           // Interface for sæt
 import java.util.TreeMap;       // Et map, der holder nøglerne sorteret (0, 1, 2 ...)
 
 
-/**LANGT FRA FÆRDIG, DETTE ER ET AI UDKAST --IKKE FÆRDIGT!! */
-/**LANGT FRA FÆRDIG, DETTE ER ET AI UDKAST --IKKE FÆRDIGT!! */
-/**LANGT FRA FÆRDIG, DETTE ER ET AI UDKAST --IKKE FÆRDIGT!! */
-/**LANGT FRA FÆRDIG, DETTE ER ET AI UDKAST --IKKE FÆRDIGT!! */
-/**LANGT FRA FÆRDIG, DETTE ER ET AI UDKAST --IKKE FÆRDIGT!! */
+//NyeAarsager finder midtpunktet af hvert cluster og markerer det som en ny årsag, 
+// hvis det ligner et cluster fra sidste kørsel mindre end 80 %.
 
-
-/**
- * Finder nye årsager ved at sammenligne denne kørsels clusters med sidste kørsels.
- * Hvert cluster bliver til ét gennemsnitspunkt (centroide). Ligner et nyt punkt
- * intet gammelt punkt nok, er clusteret en ny årsag.
- */
 public class NyeAarsager {
-
-    // static = hører til klassen, ikke til ét objekt. final = kan ikke ændres.
     // 0.8 betyder: ligner et nyt cluster et gammelt MINDRE end 80 %, er det nyt.
     public static final double STANDARD_GRAENSE = 0.8;
-
     // Den grænse, netop dette objekt bruger. Sættes én gang i konstruktøren.
     private final double graense;
 
-    // Konstruktør 1: new NyeAarsager() – bruger standardgrænsen 0.8.
-    // this(...) kalder bare konstruktør 2 nedenfor.
     public NyeAarsager() {
         this(STANDARD_GRAENSE);
     }
-
-    // Konstruktør 2: new NyeAarsager(0.7) – bruger din egen grænse (til at lege med).
     public NyeAarsager(double graense) {
-        this.graense = graense; // this.graense = feltet, graense = parameteren
+        this.graense = graense;
     }
 
-    /**
-     * Beregner én centroide (gennemsnitsvektor) pr. cluster. Støj (-1) springes over.
-     *
-     * @param vektorer   én vektor pr. samtale (768 tal hver)
-     * @param clusterIds cluster-id pr. samtale. Plads i i begge arrays = samme samtale
-     * @return map: cluster-id -> centroide
-     */
+    // Beregner én (gennemsnitsvektor) pr. cluster. Støj (-1) springes over.
+
     public Map<Integer, double[]> centroider(double[][] vektorer, int[] clusterIds) {
 
         // Sikkerhedstjek: er der 4 vektorer, skal der også være 4 cluster-id'er
@@ -69,8 +48,8 @@ public class NyeAarsager {
         for (int i = 0; i < vektorer.length; i++) { // gå gennem samtalerne én ad gangen
             int id = clusterIds[i];                   // hvilket cluster hører samtale i til?
 
-            if (id == Clusterer.NOISE) { // -1 = støj, hører ikke til noget cluster
-                continue;                // spring direkte videre til næste samtale
+            if (id == Clusterer.NOISE) { // -1 = støj, hører ikke til noget cluster - er beskrevet i clusterer.java
+                continue;              
             }
 
             // Hent summen for clusteret. Findes den ikke endnu, laves en ny
@@ -88,14 +67,10 @@ public class NyeAarsager {
             antal.merge(id, 1, Integer::sum);
         }
 
-        // resultat: cluster-id -> centroide. LinkedHashMap husker rækkefølgen.
+        //cluster-id -> centroide. LinkedHashMap husker rækkefølgen.
         Map<Integer, double[]> resultat = new LinkedHashMap<>();
 
-        // ---- Løkke 2: lav summerne om til gennemsnit ----
-        // entrySet() giver alle par (nøgle + værdi). e er ét par ad gangen:
-        //   e.getKey()   = cluster-id'et, fx 0
-        //   e.getValue() = summen, fx [1.8, 0.6]
-        // var = Java regner selv typen ud (her Map.Entry<Integer, double[]>)
+        //  Løkke 2: lav summerne om til gennemsnit 
         for (var e : summer.entrySet()) {
             double[] gennemsnit = e.getValue(); // summen for clusteret
             int n = antal.get(e.getKey());      // antal samtaler i clusteret
@@ -106,21 +81,13 @@ public class NyeAarsager {
             }
 
             // Normalisér til længde 1, så vi sammenligner RETNING og ikke længde.
-            // l2Normalize tager et 2D-array (mange vektorer), så vi pakker den ene vektor
-            // ind med new double[][]{...} og tager den ud igen med [0].
             resultat.put(e.getKey(), VectorUtils.l2Normalize(new double[][]{gennemsnit})[0]);
         }
 
         return resultat; // fx { 0: [0.95, 0.32], 1: [0, 1] }
     }
 
-    /**
-     * Finder id'erne på de clusters, der ikke ligner noget gammelt cluster.
-     *
-     * @param nye   denne kørsels centroider (cluster-id -> centroide)
-     * @param gamle sidste kørsels centroider (tom ved første kørsel)
-     * @return sæt med id'erne på de nye clusters
-     */
+    // Finder id'erne på de clusters, der ikke ligner noget gammelt cluster.
     public Set<Integer> findNye(Map<Integer, double[]> nye, Collection<double[]> gamle) {
 
         // Her samles id'erne på de nye clusters. Et Set har ingen dubletter.
@@ -144,10 +111,8 @@ public class NyeAarsager {
         return nyeIds; // fx {1}
     }
 
-    /**
-     * Finder den højeste cosine similarity mellem én centroide og alle gamle.
-     * Cosine: 1 = samme retning (samme årsag), 0 = intet til fælles.
-     */
+    // Finder den højeste cosine similarity mellem én centroide og alle gamle.
+
     public double hoejesteLighed(double[] centroide, Collection<double[]> gamle) {
 
         double bedst = -1; // start med den lavest mulige lighed (cosine går fra -1 til 1)
