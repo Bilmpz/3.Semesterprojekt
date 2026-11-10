@@ -52,7 +52,7 @@ function query(filters: Filters): string {
 
 // Henter alle kunder til dashboardets virksomhedsfilter.
 export function getCompanies(): Promise<Company[]> {
-  return get<Company[]>('/api/kunder')
+  return get<Company[]>('/api/virksomheder')
 }
 
 // Henter dashboardets nøgletal, topårsager og tidslinje.

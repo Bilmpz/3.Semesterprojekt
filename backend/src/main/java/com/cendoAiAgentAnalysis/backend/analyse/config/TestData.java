@@ -1,4 +1,4 @@
-package com.cendoAiAgentAnalysis.backend.analyse.config;
+/*package com.cendoAiAgentAnalysis.backend.analyse.config;
 
 //Giver overordnet test klassen adgang til de forskellige repositories og modeller, så vi kan oprette testdata i databasen ved opstart af applikationen.
 import com.cendoAiAgentAnalysis.backend.dataadgang.AiAgentRepository;
@@ -176,4 +176,4 @@ public class TestData implements CommandLineRunner {
             }
         }
     }
-}
+}*/

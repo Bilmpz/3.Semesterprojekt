@@ -5,7 +5,7 @@ type Props = { causes: Cause[]; onOpen: (id: string) => void }
 export function TopCauses({ causes, onOpen }: Props) {
   const max = Math.max(1, ...causes.map((c) => c.count))
   return (
-    <section className="card">
+    <section className="card top-causes-card">
       <h2>Top viderestillingsårsager</h2>
       {causes.map((c) => (
         <button key={c.id} className="bar-row" onClick={() => onOpen(c.id)}>

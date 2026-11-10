@@ -1,1 +1,4 @@
 .env
+
+# Temporary Excel lock files
+~$*.xlsx

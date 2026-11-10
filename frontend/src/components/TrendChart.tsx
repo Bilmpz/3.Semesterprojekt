@@ -1,20 +1,25 @@
 import type { DayPoint } from '../types'
 
-// Simpel SVG-linjegraf over antal viderestillede samtaler pr. dag.
 export function TrendChart({ points }: { points: DayPoint[] }) {
-  const w = 400, h = 160
   const max = Math.max(1, ...points.map((p) => p.conversations))
-  const line = points
-    .map((p, i) => `${(i / Math.max(1, points.length - 1)) * w},${h - (p.conversations / max) * (h - 10)}`)
-    .join(' ')
+  const date = (value: string) => new Date(value).toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })
   return (
-    <section className="card">
-      <h2>Udvikling over tid</h2>
-      <svg viewBox={`0 0 ${w} ${h}`} className="chart">
-        <polyline points={line} className="line" />
-      </svg>
-      <div className="axis"><span>{points[0]?.date}</span><span>{points[points.length - 1]?.date}</span></div>
-      <p className="hint">— viderestillede samtaler</p>
+    <section className="activity-chart" aria-label="Viderestillinger per dag">
+      <div className="row">
+        <span>Udvikling i den valgte periode</span>
+        <span>{points.length > 0 ? `${date(points[0].date)} – ${date(points[points.length - 1].date)}` : ''}</span>
+      </div>
+      {points.length === 0 ? <p className="hint">Ingen viderestillinger i den valgte periode.</p> : (
+        <div className="daily-bars">
+          {points.map((point) => (
+            <div className="daily-bar-column" key={point.date} title={`${date(point.date)}: ${point.conversations} viderestillinger`}>
+              <span className="daily-bar-value">{point.conversations}</span>
+              <div className="daily-bar" style={{ height: `${Math.max(2, point.conversations / max * 72)}px` }} />
+              <span className="daily-bar-date">{date(point.date)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   )
 }

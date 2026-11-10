@@ -52,7 +52,7 @@ export default function App() {
           setCompaniesError(
               error instanceof Error
                   ? error.message
-                  : 'Kunne ikke hente kunder'
+                  : 'Kunne ikke hente virksomheder'
           )
         })
 
@@ -166,7 +166,7 @@ export default function App() {
         {/* Viser fejl fra kundelisten */}
         {companiesError && (
             <div className="card dashed warning">
-              Kunne ikke hente kunder: {companiesError}
+              Kunne ikke hente virksomheder: {companiesError}
             </div>
         )}
 
@@ -195,23 +195,31 @@ export default function App() {
 
               {dashboard && (
                   <>
-                    <KpiCards d={dashboard} />
-
-                    {/* Advarsel ved lavt datagrundlag */}
-                    {dashboard.lowData && (
-                        <div className="card dashed warning">
-                          ! Lavt datagrundlag i valgt periode – tolk tallene varsomt.
+                    <div className="overview-grid overview-priority">
+                      <TopCauses causes={dashboard.topCauses} onOpen={open} />
+                      <section className="card activity-card">
+                        <div className="row">
+                          <div>
+                            <h2>Aktivitet</h2>
+                            <p className="hint">Viderestillinger for de valgte filtre</p>
+                          </div>
+                          <button className="soft-button" onClick={() => setPage('aarsager')}>Se clusters <span aria-hidden="true">→</span></button>
                         </div>
-                    )}
+                        <KpiCards d={dashboard} />
+                        <TrendChart points={dashboard.timeline} />
+                      </section>
 
-                    <div className="two">
-                      <TopCauses
-                          causes={dashboard.topCauses}
-                          onOpen={open}
-                      />
-                      <TrendChart points={dashboard.timeline} />
                     </div>
+
                   </>
+              )}
+
+              {clustersError ? (
+                  <div className="card dashed warning" role="alert">
+                    Kunne ikke hente clusters: {clustersError}
+                  </div>
+              ) : (
+                  <CauseTable clusters={clusters} onOpen={open} />
               )}
             </>
         )}
@@ -239,13 +247,7 @@ export default function App() {
             </>
         )}
 
-        {/* Eksisterende dataside */}
-        {page === 'data' && (
-            <section className="card">
-              <h2>Data</h2>
-              <p className="muted">Kommer senere.</p>
-            </section>
-        )}
+
 
       </div>
   )
