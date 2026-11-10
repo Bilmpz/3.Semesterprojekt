@@ -31,6 +31,12 @@
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
+		<!-- Security af vores Spring Boot applikation -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId> <!--Udgiver af bib -->
+			<artifactId>spring-boot-starter-security</artifactId> <!-- fortæller maven hvilket bib vi vil bruge -->
+		</dependency>
+
 		<!-- Neo4j database -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -66,6 +72,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 
