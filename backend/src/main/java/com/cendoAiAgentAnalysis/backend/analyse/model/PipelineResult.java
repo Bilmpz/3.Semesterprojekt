@@ -13,12 +13,20 @@ import java.util.TreeMap;
  * @param explanations  the LLM's explanatory sentence per conversation ("" in pipeline 2); not embedded
  * @param clusterIds    cluster id per conversation (-1 = noise)
  * @param names         name per cluster id
+ * @param silhouetter   E4: silhouette-score pr. cluster-id (tomt, hvis den ikke er beregnet)
  */
 public record PipelineResult(List<Conversation> conversations,
                              List<String> texts,
                              List<String> explanations,
                              int[] clusterIds,
-                             Map<Integer, ClusterName> names) {
+                             Map<Integer, ClusterName> names,
+                             Map<Integer, Double> silhouetter) {
+
+    // E4: den gamle konstruktør uden silhouette, så eksisterende kode og tests virker uændret
+    public PipelineResult(List<Conversation> conversations, List<String> texts, List<String> explanations,
+                          int[] clusterIds, Map<Integer, ClusterName> names) {
+        this(conversations, texts, explanations, clusterIds, names, Map.of());
+    }
 
     /** Indices of the conversations in each cluster, sorted by cluster id (noise = -1 first). */
     public Map<Integer, List<Integer>> membersByCluster() {

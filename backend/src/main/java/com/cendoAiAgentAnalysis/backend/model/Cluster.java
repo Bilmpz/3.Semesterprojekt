@@ -27,6 +27,8 @@ public class Cluster {
 
     private boolean erNy; // A6: true, hvis clusteret ikke fandtes ved sidste kørsel
 
+    private Double silhouette; // E4: clusterets silhouette-score (-1 til 1). null = ikke beregnet
+
     // Tom konstruktør. Spring Data Neo4j bruger den, når den henter et cluster fra databasen
     protected Cluster() {
     }
@@ -54,11 +56,15 @@ public class Cluster {
     public void setBeskrivelse(String beskrivelse) { this.beskrivelse = beskrivelse; }
 
     public void setStoerrelse(int stoerrelse) { this.stoerrelse = stoerrelse; }
-    
+
     public List<Double> getCentroide() { return centroide; }
-    
+
     public boolean isErNy() { return erNy; }
 
     public void setCentroide(List<Double> centroide) { this.centroide = centroide; }
     public void setErNy(boolean erNy) { this.erNy = erNy; }
+
+    public Double getSilhouette() { return silhouette; }
+
+    public void setSilhouette(Double silhouette) { this.silhouette = silhouette; }
 }
