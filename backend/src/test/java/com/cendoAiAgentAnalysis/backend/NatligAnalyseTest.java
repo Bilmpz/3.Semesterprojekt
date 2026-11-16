@@ -19,6 +19,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class NatligAnalyseTest {
+    // A5: transskriptioner skal være mindst 20 tegn, og årsager 2-6 ord, ellers afviser filtrene dem
+    private static final String GOD = "Kunde: Jeg vil gerne booke en tid";
+    private static final String FEJL = "Kunde: Denne samtale giver en fejl";
+
     @TempDir Path temporary;
 
     private PipelineConfig config(String... transcripts) throws Exception {
@@ -52,10 +56,10 @@ class NatligAnalyseTest {
     }
 
     @Test void enSamtalefejlOgTomTekstStopperIkkeResten() throws Exception {
-        var cfg = config("god", "fejl", "", "god igen");
+        var cfg = config(GOD, FEJL, "", GOD + " igen");
         var service = service(cfg, text -> {
-            if (text.equals("fejl")) throw new IOException("følsom tekst");
-            return new TransferReason("booking", "forklaring");
+            if (text.equals(FEJL)) throw new IOException("følsom tekst");
+            return new TransferReason("Booking af tid", "forklaring");
         });
         var run = service.koerAnalyseMedDetaljer();
         assertEquals(4, run.inputCount());
@@ -66,8 +70,8 @@ class NatligAnalyseTest {
     }
 
     @Test void laasenFrigivesEfterFilfejl() throws Exception {
-        var cfg = config("god");
-        var service = service(cfg, text -> new TransferReason("booking", ""));
+        var cfg = config(GOD);
+        var service = service(cfg, text -> new TransferReason("Booking af tid", ""));
         when(cfg.datasetPath()).thenReturn(temporary.resolve("mangler.xlsx"));
         assertThrows(IOException.class, service::koerAnalyse);
         when(cfg.datasetPath()).thenReturn(temporary.resolve("input.xlsx"));
@@ -77,10 +81,10 @@ class NatligAnalyseTest {
     @Test void samtidigeKoerslerAfvises() throws Exception {
         var entered = new CountDownLatch(1);
         var release = new CountDownLatch(1);
-        var service = service(config("god"), text -> {
+        var service = service(config(GOD), text -> {
             entered.countDown();
             if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("Timeout");
-            return new TransferReason("booking", "");
+            return new TransferReason("Booking af tid", "");
         });
         try (var executor = Executors.newSingleThreadExecutor()) {
             var future = executor.submit(service::koerAnalyse);
@@ -96,5 +100,16 @@ class NatligAnalyseTest {
         var run = service(config(""), text -> { throw new AssertionError("Må ikke kaldes"); }).koerAnalyseMedDetaljer();
         assertEquals(1, run.conversationErrors());
         assertTrue(run.result().conversations().isEmpty());
+    }
+
+    @Test void ugyldigAarsagFraLlmSpringesOver() throws Exception {
+        // A5: AarsagValidator afviser rå JSON og årsager med ordet "kunde"; resten af kørslen fortsætter
+        var cfg = config(GOD, FEJL, GOD + " igen");
+        var service = service(cfg, text -> text.equals(FEJL)
+                ? new TransferReason("{\"primary_reason\": \"Booking\"}", "forklaring")
+                : new TransferReason("Booking af tid", "forklaring"));
+        var run = service.koerAnalyseMedDetaljer();
+        assertEquals(1, run.conversationErrors());
+        assertEquals(List.of("id0", "id2"), run.result().conversations().stream().map(c -> c.id()).toList());
     }
 }
