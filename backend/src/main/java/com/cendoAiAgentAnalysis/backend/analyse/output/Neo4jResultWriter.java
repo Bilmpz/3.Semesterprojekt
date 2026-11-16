@@ -225,6 +225,7 @@ public class Neo4jResultWriter {
 
             // Gemmer eller opdaterer samtalen i Neo4j
             // Samtalens clusterrelation gemmes samtidig
+            samtaleRepository.fjernClusterPil(conversation.id()); // ellers får samtalen ét cluster mere pr. kørsel
             samtaleRepository.save(samtale);
         }
     }

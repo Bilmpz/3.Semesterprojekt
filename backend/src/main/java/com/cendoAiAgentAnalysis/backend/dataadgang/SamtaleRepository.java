@@ -41,4 +41,9 @@ public interface SamtaleRepository extends Neo4jRepository<Samtale, String>, Sam
     // Giver null, hvis samtalen ikke er koblet til en virksomhed.
     @Query("MATCH (v:Virksomhed)-[:HAR_KUNDE]->(:Kunde)-[:HAR]->(s:Samtale {id: $id}) RETURN v.navn LIMIT 1")
     String findVirksomhedsnavn(@Param("id") String id);
+
+    // Fjerner samtalens gamle TILHOERER-pil, før A3 gemmer den nye. SDN gør det ikke selv,
+    // fordi Samtale har et tildelt id uden @Version og derfor altid ses som "ny" ved save()
+    @Query("MATCH (:Samtale {id: $id})-[r:TILHOERER]->(:Cluster) DELETE r")
+    void fjernClusterPil(@Param("id") String id);
 }

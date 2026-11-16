@@ -33,6 +33,7 @@ import org.springframework.security.web.SecurityFilterChain;
                             .requestMatchers("/api/**").authenticated()
                             .anyRequest().permitAll()
                     )
+                    .csrf(csrf -> csrf.ignoringRequestMatchers("/api/pipeline/run")) // knappen "Start ny kørsel" sender POST uden CSRF-token
                     .httpBasic(Customizer.withDefaults())
                     .build();
                                                                             //Alt der er ovenstående er "Spring Security" selv
