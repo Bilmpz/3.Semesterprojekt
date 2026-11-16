@@ -4,6 +4,7 @@ import com.cendoAiAgentAnalysis.backend.analyse.clustering.Clusterer;
 import com.cendoAiAgentAnalysis.backend.analyse.config.PipelineConfig;
 import com.cendoAiAgentAnalysis.backend.analyse.data.DatasetLoader;
 import com.cendoAiAgentAnalysis.backend.analyse.embedding.Embedder;
+import com.cendoAiAgentAnalysis.backend.analyse.evaluation.SilhouetteBeregner;
 import com.cendoAiAgentAnalysis.backend.analyse.extraction.ReasonCleaner;
 import com.cendoAiAgentAnalysis.backend.analyse.extraction.ReasonExtractor;
 import com.cendoAiAgentAnalysis.backend.analyse.model.*;
@@ -115,6 +116,7 @@ public class AnalyseService {
             double[][] normalized = VectorUtils.l2Normalize(vectors.toArray(new double[0][]));
             Map<Integer, ClusterName> names = new TreeMap<>();
             int[] ids = new int[0];
+            Map<Integer, Double> silhouetter = Map.of(); // E4
             boolean fallback = false;
             if (!conversations.isEmpty()) {
                 double[][] points;
@@ -127,6 +129,10 @@ public class AnalyseService {
                 }
                 ids = clusterer.cluster(points);
                 if (ids.length != conversations.size()) throw new IllegalStateException("Forkert antal cluster-id'er");
+                // E4: clusterkvalitet uden facit, beregnet på de samme punkter, som blev clustered
+                silhouetter = SilhouetteBeregner.perCluster(points, ids);
+                log.info("Silhouette samlet={}, pr. cluster={}",
+                        String.format(Locale.ROOT, "%.3f", SilhouetteBeregner.samlet(points, ids)), silhouetter);
                 PipelineResult unnamed = new PipelineResult(conversations, reasons, explanations, ids, names);
                 if (config.namingEnabled()) {
                     for (var group : unnamed.membersByCluster().entrySet()) {
@@ -142,7 +148,7 @@ public class AnalyseService {
                     }
                 }
             }
-            PipelineResult result = new PipelineResult(conversations, reasons, explanations, ids, names);
+            PipelineResult result = new PipelineResult(conversations, reasons, explanations, ids, names, silhouetter);
             success = true;
             log.warn("Neo4j-gemning mangler: A3-skriveren er endnu en stub");
             return new AnalysisRun(result, normalized, inputCount, errors, namingErrors, fallback);

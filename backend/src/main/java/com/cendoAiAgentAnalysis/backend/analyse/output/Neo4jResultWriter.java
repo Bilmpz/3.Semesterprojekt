@@ -203,6 +203,9 @@ public class Neo4jResultWriter {
                     }
                     cluster.setErNy(nyeIds.contains(clusterId));
 
+                    // E4: clusterets silhouette-score (null, hvis den ikke er beregnet)
+                    cluster.setSilhouette(result.silhouetter().get(clusterId));
+
                     // Gemmer clusteret i Neo4j
                     cluster = clusterRepository.save(cluster);
 
