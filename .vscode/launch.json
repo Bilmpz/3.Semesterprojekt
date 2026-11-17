@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+  "type": "java",
+  "name": "Backend – importer 156 samtaler",
+  "request": "launch",
+  "mainClass": "com.cendoAiAgentAnalysis.backend.BackendApplication",
+  "cwd": "${workspaceFolder}/backend",
+  "args": "--spring.profiles.active=demo156"
+},
+
+
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        }
+    ]
+}

@@ -5,6 +5,7 @@ import com.cendoAiAgentAnalysis.backend.analyse.model.TransferReason;
 import com.cendoAiAgentAnalysis.backend.analyse.util.JsonText;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cendoAiAgentAnalysis.backend.analyse.validering.AarsagValidator;
 
 import java.io.IOException;
 
@@ -53,7 +54,23 @@ public class LlmReasonExtractor implements ReasonExtractor {
 
     @Override
     public TransferReason extractReason(String transcript) throws IOException, InterruptedException {
-        String answer = chat.complete(SYSTEM_PROMPT, "Transskription:\n" + transcript);
+        String message = "Transskription:\n" + transcript;
+        TransferReason reason = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            reason = parse(chat.complete(SYSTEM_PROMPT, message));
+            var validation = new AarsagValidator().validate(reason.primary());
+            if (validation.ok()) {
+                return reason;
+            }
+            message = "Transskription:\n" + transcript
+                    + "\n\nDit tidligere svar blev afvist: " + validation.besked()
+                    + ". Giv et nyt JSON-svar. primary_reason skal være en overskrift på 2-6 ord"
+                    + " uden ordet kunde. Bevar betydningen og giv også explanation.";
+        }
+        return reason; // The caller records a validation error after the bounded retries.
+    }
+
+    private TransferReason parse(String answer) throws IOException {
         JsonNode json = JsonText.firstObject(answer, mapper);
         if (json != null && json.hasNonNull("primary_reason")) {
             return new TransferReason(ReasonCleaner.clean(json.get("primary_reason").asText()),

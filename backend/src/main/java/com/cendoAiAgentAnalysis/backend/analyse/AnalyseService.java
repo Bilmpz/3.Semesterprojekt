@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.util.*;
@@ -42,24 +41,6 @@ public class AnalyseService {
         this.reducer = reducer;
         this.clusterer = clusterer;
         this.namer = namer;
-    }
-
-    @Scheduled(cron = "${analyse.cron:0 0 2 * * *}", zone = "Europe/Copenhagen")
-    public void koerNatligAnalyse() {
-        try {
-            // Drift må aldrig forbruge den urørte test-del.
-            if (!"train".equals(config.split())) {
-                log.warn("Natjob sprunget over: dataset.split skal være train");
-                return;
-            }
-            koerAnalyse();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("Natlig analyse afbrudt");
-        } catch (IOException | RuntimeException e) {
-            // Undtagelsestekst kan indeholde modelsvar og samtaletekst.
-            log.error("Natlig analyse fejlede ({})", e.getClass().getSimpleName());
-        }
     }
 
     public PipelineResult koerAnalyse() throws IOException, InterruptedException {
@@ -178,7 +159,7 @@ public class AnalyseService {
             }
             PipelineResult result = new PipelineResult(conversations, reasons, explanations, ids, names, silhouetter);
             success = true;
-            log.warn("Neo4j-gemning mangler: A3-skriveren er endnu en stub");
+            log.debug("Analyseresultat klar; AnalyseOgGem gemmer resultatet i Neo4j");
             return new AnalysisRun(result, normalized, inputCount, errors, namingErrors, fallback);
         } finally {
             log.info("Analyse slut: gennemført={}, indlæst={}, samtalefejl={}, navngivningsfejl={}",

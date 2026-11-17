@@ -18,6 +18,19 @@ import java.util.List; // Metoderne returnerer lister af samtaler
 //   SamtaleStatistik = interface med metoder til statistik (hentOverblikstal)
 public interface SamtaleRepository extends Neo4jRepository<Samtale, String>, SamtaleStatistik {
 
+    // Replace cluster membership explicitly before SDN loads the conversation.
+    // Keep customer/agent relationships and the conversation itself intact.
+    @Query("""
+            MATCH (s:Samtale)
+            WHERE s.id IN $ids
+            WITH s ORDER BY s.id
+            SET s.id = s.id
+            WITH s
+            OPTIONAL MATCH (s)-[r:TILHOERER]->(:Cluster)
+            DELETE r
+            """)
+    void fjernClustertilknytninger(@Param("ids") List<String> ids);
+
     // Alle samtaler i ét cluster, nyeste først (bruges, når medarbejderen åbner et cluster – UC2).
     //
     // Spring læser metodenavnet og laver selv forespørgslen:

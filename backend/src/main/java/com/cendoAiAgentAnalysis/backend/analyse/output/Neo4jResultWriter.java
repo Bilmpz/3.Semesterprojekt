@@ -13,6 +13,8 @@ import com.cendoAiAgentAnalysis.backend.model.Samtale;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -121,6 +123,13 @@ public class Neo4jResultWriter {
             nyeIds = nyeAarsager.findNye(nyeCentroider, gamle);
         }
 
+        // Remove ALL old memberships before loading entities, including legacy duplicates.
+        // This runs in the same transaction as the saves, so failures restore the old memberships.
+        if (!result.conversations().isEmpty()) {
+            samtaleRepository.fjernClustertilknytninger(
+                    result.conversations().stream().map(conversation -> conversation.id()).toList());
+        }
+
         // Gennemgår alle samtaler fra pipelinen
         for (int i = 0; i < conversationCount; i++) {
 
@@ -148,6 +157,11 @@ public class Neo4jResultWriter {
                     ));
 
             // Opdaterer samtalens tekst og analyseresultat
+            if (samtale.getTidspunkt() == null) {
+                samtale.setTidspunkt(LocalDateTime.now(ZoneId.of("Europe/Copenhagen")));
+            }
+            samtale.setViderestillet(true);
+            samtale.setStatus("OK");
             samtale.setTranscript(conversation.transcript());
             samtale.setViderestillingsaarsag(reason);
             samtale.setForklaring(explanation);

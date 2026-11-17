@@ -75,7 +75,7 @@ public class ClusterController {
                         c.navn(),                // title
                         c.beskrivelse(),         // description
                         c.antal(),               // count
-                        andel(c.antal(), total), // share i hele procent
+                        andel(c.antal(), total), // share i procent med decimaler
                         trend(foersteHalvdel.getOrDefault(c.id(), 0L),
                                 andenHalvdel.getOrDefault(c.id(), 0L)))) // "up", "down" eller "flat")                 // trend: regnes ud i næste bid
                 .toList();
@@ -105,12 +105,12 @@ public class ClusterController {
     }
 
 
-    // Andel i hele procent: antal / total * 100, afrundet. Giver 0, hvis der ingen samtaler er.
-    private long andel(long antal, long total) {
+    // Bevar decimalerne; frontend formaterer procenten. Giver 0 ved et tomt resultat.
+    private double andel(long antal, long total) {
         if (total == 0) {
             return 0; // Undgå at dele med 0
         }
-        return Math.round(antal * 100.0 / total);
+        return antal * 100.0 / total;
     }
 
 

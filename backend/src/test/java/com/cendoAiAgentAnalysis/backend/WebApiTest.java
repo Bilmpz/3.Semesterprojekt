@@ -380,8 +380,8 @@ class WebApiTest {
                     .as("demo-clusteret %s findes", demoTitles[i])
                     .isNotNull();
             assertThat(demoCluster.path("count").asLong()).isEqualTo(expectedCounts[i]);
-            assertThat(demoCluster.path("share").asLong())
-                    .isEqualTo(Math.round(expectedCounts[i] * 100.0 / totalConversations));
+            assertThat(demoCluster.path("share").asDouble())
+                    .isEqualTo(expectedCounts[i] * 100.0 / totalConversations);
             assertThat(demoCluster.path("trend").asText()).isIn("up", "down", "flat");
         }
     }

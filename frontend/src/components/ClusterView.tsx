@@ -109,14 +109,14 @@ export function ClusterView({ cluster, onBack }: Props) {
                         {s.reason}
                     </button>
 
-                    {/* Viser forklaring og anonymiseret samtaletekst */}
+                    {/* Viser forklaringen */}
                     {open === s.id && (
                         <div>
                             <p>
                                 <strong>Forklaring:</strong> {s.explanation}
                             </p>
 
-                            <pre>{s.transcript}</pre>
+
                         </div>
                     )}
 

@@ -12,6 +12,7 @@ public class SamtaleStatistikImpl implements SamtaleStatistik {
     private static final String OVERBLIKSTAL = """
             MATCH (s:Samtale)
             WHERE s.tidspunkt >= $fra AND s.tidspunkt < $til
+              AND coalesce(s.viderestillet, true) = true
               AND (
                 $companyId = ''
                 OR EXISTS {
@@ -32,6 +33,7 @@ public class SamtaleStatistikImpl implements SamtaleStatistik {
     private static final String TOP_AARSAGER = """
             MATCH (s:Samtale)-[:TILHOERER]->(c:Cluster)
             WHERE s.tidspunkt >= $fra AND s.tidspunkt < $til
+              AND coalesce(s.viderestillet, true) = true
               AND (
                 $companyId = ''
                 OR EXISTS {
@@ -50,6 +52,7 @@ public class SamtaleStatistikImpl implements SamtaleStatistik {
     private static final String SAMTALER_PR_DAG = """
             MATCH (s:Samtale)
             WHERE s.tidspunkt >= $fra AND s.tidspunkt < $til
+              AND coalesce(s.viderestillet, true) = true
               AND (
                 $companyId = ''
                 OR EXISTS {

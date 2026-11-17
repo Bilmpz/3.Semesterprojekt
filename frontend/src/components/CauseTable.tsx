@@ -47,7 +47,7 @@ export function CauseTable({ clusters, onOpen }: Props) {
                   <th scope="row">{c.title || 'Unavngivet cluster'}</th>
                   <td className="muted">{c.description || 'Ingen beskrivelse endnu.'}</td>
                   <td>{c.count.toLocaleString('da-DK')}</td>
-                  <td>{c.share} %</td>
+                  <td>{c.share.toLocaleString('da-DK', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %</td>
                   <td><button aria-label={`Se samtaler i ${c.title || 'unavngivet cluster'}`} onClick={() => onOpen(c.id)}>Se samtaler</button></td>
                 </tr>
               ))}
@@ -55,7 +55,6 @@ export function CauseTable({ clusters, onOpen }: Props) {
           </table>
         </div>
       )}
-      <p className="hint" aria-live="polite">Viser {sorted.length} clusters med i alt {clusters.reduce((sum, c) => sum + c.count, 0).toLocaleString('da-DK')} samtaler.</p>
     </section>
   )
 }

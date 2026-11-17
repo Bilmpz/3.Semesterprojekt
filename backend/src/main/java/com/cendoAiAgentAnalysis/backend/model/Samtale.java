@@ -33,6 +33,8 @@ public class Samtale {
 
     private String forklaring; // LLM'ens længere forklaring af den konkrete samtale
 
+    private Boolean viderestillet = true; // Legacy data is treated as transferred.
+
     private String status; // Om analysen gik godt, fx "OK" eller "FEJLET" (sættes af Validering, A5)
 
     // ---------------- Relationer (bliver til pile mellem noder) ----------------
@@ -89,6 +91,10 @@ public class Samtale {
     public AiAgent getAiAgent() { return aiAgent; }
 
     // ---------------- Setters ----------------
+
+    public Boolean getViderestillet() { return viderestillet; }
+    public void setViderestillet(Boolean viderestillet) { this.viderestillet = viderestillet; }
+    public void setTidspunkt(LocalDateTime tidspunkt) { this.tidspunkt = tidspunkt; }
 
     public void setTranscript(String transcript) { this.transcript = transcript; }
     public void setEmbedding(List<Double> embedding) { this.embedding = embedding; }

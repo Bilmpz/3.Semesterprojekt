@@ -14,7 +14,7 @@ public record ClusterDto(
         String title,        // clusterets navn, fx "Ombooking af tid"
         String description,  // clusterets beskrivelse fra LLM'en
         long count,          // antal samtaler i clusteret i den valgte periode
-        long share,          // andel af alle viderestillinger i perioden, i hele procent (fx 37)
+        double share,        // andel af alle viderestillinger i perioden, i procent (fx 0.4)
         String trend         // "up", "down" eller "flat"
 ) {
 }
