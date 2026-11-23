@@ -54,4 +54,5 @@ public interface SamtaleRepository extends Neo4jRepository<Samtale, String>, Sam
     // Giver null, hvis samtalen ikke er koblet til en virksomhed.
     @Query("MATCH (v:Virksomhed)-[:HAR_KUNDE]->(:Kunde)-[:HAR]->(s:Samtale {id: $id}) RETURN v.navn LIMIT 1")
     String findVirksomhedsnavn(@Param("id") String id);
+
 }
