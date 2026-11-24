@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "java",
+            "name": "Backend – uden import",
+            "request": "launch",
+            "mainClass": "com.cendoAiAgentAnalysis.backend.BackendApplication",
+            "cwd": "${workspaceFolder}/backend"
+        },
+        {
   "type": "java",
   "name": "Backend – importer 156 samtaler",
   "request": "launch",

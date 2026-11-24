@@ -2,7 +2,6 @@ package com.cendoAiAgentAnalysis.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.cendoAiAgentAnalysis.backend.analyse.config.TestData;
 import com.cendoAiAgentAnalysis.backend.dataadgang.SamtaleRepository;
 import com.cendoAiAgentAnalysis.backend.model.Samtale;
 
@@ -11,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThan;
@@ -41,9 +39,6 @@ class WebApiTest {
 
     @Autowired
     private SamtaleRepository samtaleRepository;
-
-    @MockitoBean
-    private TestData testData;
 
     // #########################################################
     // ### Test af health-endpointet - Der er 4 tests af det ###
